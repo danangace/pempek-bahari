@@ -1,5 +1,6 @@
 import * as React from "react"
 import { useOrders } from "@/hooks/use-orders"
+import { useCampaigns } from "@/hooks/use-campaigns"
 import { usePempekTypes } from "@/hooks/use-pempek-types"
 import { useProducts } from "@/hooks/use-products"
 import { useIsMobile } from "@/hooks/use-mobile"
@@ -24,6 +25,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { OrderWithItems } from "@/types"
 
@@ -126,24 +134,32 @@ function DetailEntry({ entry }: { entry: MixCustomEntry }) {
 
 export function ProductionPlanPage() {
   const { orders, loading, error } = useOrders()
+  const { campaigns, loading: campaignsLoading } = useCampaigns()
   const { pempekTypes, loading: typesLoading } = usePempekTypes(false)
   const { products } = useProducts()
   const isMobile = useIsMobile()
   const [mixCustomDialog, setMixCustomDialog] = React.useState<string | null>(null)
+  const [campaignFilter, setCampaignFilter] = React.useState("all")
 
   const typeNames = new Map(pempekTypes.map((t) => [t.id, t.name]))
   const customMixNames = new Set(
     products.filter((p) => p.is_custom_mix).map((p) => p.name)
   )
 
-  const activeOrders = orders.filter(
-    (o) => o.status === "pending" || o.status === "in_production"
-  )
+  const activeOrders = orders
+    .filter((o) => o.status === "pending" || o.status === "in_production")
+    .filter((o) => {
+      if (campaignFilter === "all") return true
+      if (campaignFilter === "none") return !o.campaign_id
+      return o.campaign_id === campaignFilter
+    })
+
   const aggregate = aggregateByPempekType(activeOrders, typeNames)
   const byProduct = aggregateByProduct(activeOrders)
   const totalPieces = aggregate.reduce((sum, p) => sum + p.total_pieces, 0)
 
-  const isLoading = loading || typesLoading
+  const selectedCampaign = campaigns.find((c) => c.id === campaignFilter)
+  const isLoading = loading || typesLoading || campaignsLoading
 
   return (
     <main className="mx-auto max-w-lg px-4 py-8">
@@ -154,6 +170,33 @@ export function ProductionPlanPage() {
           <em>Sedang Diproses</em>
         </p>
       </div>
+
+      {/* Campaign filter */}
+      {campaigns.length > 0 && (
+        <div className="mb-4 flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Campaign:</span>
+          <Select value={campaignFilter} onValueChange={setCampaignFilter}>
+            <SelectTrigger className="h-8 w-[220px] text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Semua Campaign</SelectItem>
+              <SelectItem value="none">Tanpa Campaign</SelectItem>
+              {campaigns.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {selectedCampaign && (
+        <div className="mb-4 rounded-lg bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+          Campaign: <span className="font-medium text-foreground">{selectedCampaign.name}</span>
+        </div>
+      )}
 
       {error && (
         <p className="mb-4 text-sm text-destructive">

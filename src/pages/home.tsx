@@ -38,7 +38,11 @@ export function HomePage() {
     setPickerProduct(product)
   }
 
-  function handlePickerConfirm(product: Product, compositions: CartItemComposition[], packQty: number) {
+  function handlePickerConfirm(
+    product: Product,
+    compositions: CartItemComposition[],
+    packQty: number
+  ) {
     addItem(product, packQty, compositions)
     toast.success(`${product.name} ditambahkan ke keranjang`)
   }
@@ -81,9 +85,6 @@ export function HomePage() {
     <main className="mx-auto max-w-5xl px-4 py-8">
       <div className="mb-8">
         <h1 className="text-2xl font-semibold">Menu Pempek</h1>
-        <p className="mt-1 text-muted-foreground">
-          Pempek segar khas Palembang, dibuat setiap hari
-        </p>
       </div>
 
       {productsLoading ? (
@@ -144,7 +145,9 @@ export function HomePage() {
           pempekTypes={pempekTypes}
           loadingTypes={typesLoading}
           open={!!pickerProduct}
-          onOpenChange={(v) => { if (!v) setPickerProduct(null) }}
+          onOpenChange={(v) => {
+            if (!v) setPickerProduct(null)
+          }}
           onConfirm={handlePickerConfirm}
         />
       )}
