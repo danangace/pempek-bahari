@@ -70,6 +70,7 @@ export interface Campaign {
   description: string | null
   purchase_start_date: string
   purchase_end_date: string
+  start_delivery_date: string | null
   status: CampaignStatus
   created_at: string
 }

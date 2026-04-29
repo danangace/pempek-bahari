@@ -69,6 +69,7 @@ interface CreateFormData {
   description: string
   purchase_start_date: string
   purchase_end_date: string
+  start_delivery_date: string
 }
 
 export function AdminCampaignsPage() {
@@ -85,6 +86,7 @@ export function AdminCampaignsPage() {
     description: "",
     purchase_start_date: "",
     purchase_end_date: "",
+    start_delivery_date: "",
   })
 
   const [editForm, setEditForm] = React.useState<Partial<CreateFormData>>({})
@@ -96,6 +98,7 @@ export function AdminCampaignsPage() {
       description: campaign.description ?? "",
       purchase_start_date: campaign.purchase_start_date,
       purchase_end_date: campaign.purchase_end_date,
+      start_delivery_date: campaign.start_delivery_date ?? "",
     })
   }
 
@@ -108,10 +111,11 @@ export function AdminCampaignsPage() {
         description: createForm.description.trim() || null,
         purchase_start_date: createForm.purchase_start_date,
         purchase_end_date: createForm.purchase_end_date,
+        start_delivery_date: createForm.start_delivery_date || null,
       })
       toast.success("Campaign berhasil dibuat")
       setShowCreateDialog(false)
-      setCreateForm({ name: "", description: "", purchase_start_date: "", purchase_end_date: "" })
+      setCreateForm({ name: "", description: "", purchase_start_date: "", purchase_end_date: "", start_delivery_date: "" })
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Gagal membuat campaign")
     } finally {
@@ -129,6 +133,7 @@ export function AdminCampaignsPage() {
         description: editForm.description?.trim() || null,
         purchase_start_date: editForm.purchase_start_date,
         purchase_end_date: editForm.purchase_end_date,
+        start_delivery_date: editForm.start_delivery_date || null,
       })
       toast.success("Campaign berhasil diperbarui")
       setEditingCampaign(null)
@@ -196,6 +201,7 @@ export function AdminCampaignsPage() {
                 <TableHead>Deskripsi</TableHead>
                 <TableHead>Mulai Order</TableHead>
                 <TableHead>Tutup Order</TableHead>
+                <TableHead>Mulai Pengiriman</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Aksi</TableHead>
               </TableRow>
@@ -212,6 +218,9 @@ export function AdminCampaignsPage() {
                   </TableCell>
                   <TableCell className="text-sm whitespace-nowrap">
                     {formatDate(c.purchase_end_date)}
+                  </TableCell>
+                  <TableCell className="text-sm whitespace-nowrap">
+                    {c.start_delivery_date ? formatDate(c.start_delivery_date) : "—"}
                   </TableCell>
                   <TableCell>
                     <CampaignStatusBadge status={c.status} />
@@ -299,6 +308,17 @@ export function AdminCampaignsPage() {
                 />
               </div>
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="c-delivery">
+                Mulai Pengiriman <span className="text-muted-foreground">(opsional)</span>
+              </Label>
+              <Input
+                id="c-delivery"
+                type="date"
+                value={createForm.start_delivery_date}
+                onChange={(e) => setCreateForm((p) => ({ ...p, start_delivery_date: e.target.value }))}
+              />
+            </div>
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => setShowCreateDialog(false)}>
                 Batal
@@ -359,6 +379,17 @@ export function AdminCampaignsPage() {
                   required
                 />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="e-delivery">
+                Mulai Pengiriman <span className="text-muted-foreground">(opsional)</span>
+              </Label>
+              <Input
+                id="e-delivery"
+                type="date"
+                value={editForm.start_delivery_date ?? ""}
+                onChange={(e) => setEditForm((p) => ({ ...p, start_delivery_date: e.target.value }))}
+              />
             </div>
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => setEditingCampaign(null)}>

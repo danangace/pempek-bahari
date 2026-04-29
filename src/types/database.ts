@@ -79,6 +79,7 @@ export interface Database {
           description: string | null
           purchase_start_date: string
           purchase_end_date: string
+          start_delivery_date: string | null
           status: string
           created_at: string
         }
@@ -88,6 +89,7 @@ export interface Database {
           description?: string | null
           purchase_start_date: string
           purchase_end_date: string
+          start_delivery_date?: string | null
           status?: string
           created_at?: string
         }
@@ -97,6 +99,7 @@ export interface Database {
           description?: string | null
           purchase_start_date?: string
           purchase_end_date?: string
+          start_delivery_date?: string | null
           status?: string
           created_at?: string
         }

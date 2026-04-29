@@ -22,6 +22,47 @@ function ClosedShopPage() {
   )
 }
 
+function formatDateRange(start: string, end: string) {
+  const fmt = (d: string) =>
+    new Date(d).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" })
+  return `${fmt(start)} – ${fmt(end)}`
+}
+
+function CampaignBanner({ campaign }: { campaign: import("@/types").Campaign }) {
+  return (
+    <div className="mb-8 rounded-xl border border-border bg-muted/40 px-4 py-4">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+        Campaign Aktif
+      </p>
+      <h2 className="text-base font-semibold">{campaign.name}</h2>
+      {campaign.description && (
+        <p className="mt-1 text-sm text-muted-foreground">{campaign.description}</p>
+      )}
+      <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1.5 text-sm">
+        <div>
+          <span className="text-muted-foreground">Periode Pemesanan: </span>
+          <span className="font-medium">
+            {formatDateRange(campaign.purchase_start_date, campaign.purchase_end_date)}
+          </span>
+        </div>
+        {campaign.start_delivery_date && (
+          <div>
+            <span className="text-muted-foreground">Mulai Pengiriman: </span>
+            <span className="font-medium">
+              {new Date(campaign.start_delivery_date).toLocaleDateString("id-ID", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+              })}
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+
 export function HomePage() {
   const { products, loading: productsLoading, error } = useProducts()
   const { pempekTypes, loading: typesLoading } = usePempekTypes()
@@ -83,9 +124,7 @@ export function HomePage() {
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-semibold">Menu Pempek</h1>
-      </div>
+      <CampaignBanner campaign={campaign} />
 
       {productsLoading ? (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
