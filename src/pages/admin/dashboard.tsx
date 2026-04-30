@@ -1039,7 +1039,7 @@ export function AdminDashboardPage() {
                           </SelectContent>
                         </Select>
                         )}
-                        {txn?.is_paid && txn?.id && (
+                        {txn?.id && (
                           <Button
                             size="sm"
                             variant="outline"
