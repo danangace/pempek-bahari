@@ -1,5 +1,4 @@
 import * as React from "react"
-import { Link } from "react-router-dom"
 import { useOrders } from "@/hooks/use-orders"
 import { useCampaigns } from "@/hooks/use-campaigns"
 import { useBankAccounts } from "@/hooks/use-bank-accounts"
@@ -1038,18 +1037,6 @@ export function AdminDashboardPage() {
                             </SelectItem>
                           </SelectContent>
                         </Select>
-                        )}
-                        {txn?.id && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 w-[160px] text-xs"
-                            asChild
-                          >
-                            <Link to={`/invoice/${txn.id}`} target="_blank">
-                              🧾 Lihat Invoice
-                            </Link>
-                          </Button>
                         )}
                       </div>
                     </TableCell>
