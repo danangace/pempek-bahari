@@ -908,6 +908,7 @@ export function AdminDashboardPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>ID</TableHead>
+                <TableHead>Invoice</TableHead>
                 <TableHead>Tanggal</TableHead>
                 <TableHead>Pelanggan</TableHead>
                 <TableHead>WhatsApp</TableHead>
@@ -929,6 +930,20 @@ export function AdminDashboardPage() {
                   <TableRow key={order.id}>
                     <TableCell className="font-mono text-xs">
                       #{shortId(order.id)}
+                    </TableCell>
+                    <TableCell className="text-xs whitespace-nowrap">
+                      {txn ? (
+                        <a
+                          href={`/invoice/${txn.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline"
+                        >
+                          Lihat Invoice
+                        </a>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                       {new Date(order.created_at).toLocaleString("id-ID", {
