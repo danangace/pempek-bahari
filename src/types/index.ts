@@ -14,15 +14,6 @@ export type CampaignStatus =
 
 export type PaymentType = "bayar_sekarang" | "bayar_nanti"
 
-export type DeliveryType = "direct" | "paxel" | "grab_express" | "go_send"
-
-export const DELIVERY_OPTIONS: { value: DeliveryType; label: string; description: string; isCourier: boolean }[] = [
-  { value: "direct",       label: "🏠 Antar Langsung", description: "Diantarkan langsung (area sekitar / partner)", isCourier: false },
-  { value: "paxel",        label: "📦 Paxel",          description: "Pengiriman via Paxel",                        isCourier: true  },
-  { value: "grab_express", label: "🟢 Grab Express",   description: "Pengiriman via Grab Express",                 isCourier: true  },
-  { value: "go_send",      label: "🔵 GoSend",         description: "Pengiriman via GoSend",                       isCourier: true  },
-]
-
 // ---------------------------------------------------------------------------
 // Pempek types & compositions
 // ---------------------------------------------------------------------------
@@ -98,7 +89,6 @@ export interface Order {
   total_amount: number
   status: OrderStatus
   payment_type: PaymentType
-  delivery_type: DeliveryType
   created_at: string
 }
 
@@ -119,6 +109,12 @@ export interface BankAccount {
   account_number: string
 }
 
+export interface DeliveryTypeOption {
+  id: string
+  name: string
+  is_active: boolean
+}
+
 export interface Transaction {
   id: string
   order_id: string
@@ -128,6 +124,8 @@ export interface Transaction {
   discount: number | null
   bank_account_id: string | null
   bank_accounts?: BankAccount | null
+  delivery_type_id: string | null
+  delivery_types?: DeliveryTypeOption | null
   created_at: string
 }
 
@@ -180,6 +178,8 @@ export interface TransactionSummary {
   discount: number | null
   bank_account_id: string | null
   bank_accounts?: BankAccount | null
+  delivery_type_id: string | null
+  delivery_types?: DeliveryTypeOption | null
 }
 
 export interface OrderWithItems extends Order {

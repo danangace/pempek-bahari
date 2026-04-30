@@ -4,6 +4,7 @@ import {
   Calendar01Icon,
   NoodlesIcon,
   ClipboardIcon,
+  DeliveryBox01Icon,
   Logout01Icon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -16,6 +17,7 @@ const NAV_ITEMS = [
   { to: "/admin/campaigns", label: "Campaign", icon: Calendar01Icon },
   { to: "/admin/pempek-types", label: "Jenis Pempek", icon: NoodlesIcon },
   { to: "/admin/production-plan", label: "Produksi", icon: ClipboardIcon },
+  { to: "/admin/delivery-types", label: "Jenis Pengiriman", icon: DeliveryBox01Icon },
 ]
 
 export function AdminLayout() {

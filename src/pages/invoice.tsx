@@ -135,6 +135,12 @@ export function InvoicePage() {
             </span>
           )}
         </div>
+        {invoice.delivery_types && (
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>Jenis Pengiriman</span>
+            <span>{invoice.delivery_types.name}</span>
+          </div>
+        )}
         <Separator />
         <div className="flex justify-between font-semibold">
           <span>Total</span>

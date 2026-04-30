@@ -26,7 +26,7 @@ export function useInvoice(transactionId: string | undefined): UseInvoiceResult 
 
       const { data, error: fetchError } = await supabase
         .from("transactions")
-        .select("*, bank_accounts(id, name, bank_name, account_number), orders(*, order_items(*, products(*), order_item_compositions(*)))")
+        .select("*, bank_accounts(id, name, bank_name, account_number), delivery_types(id, name, is_active), orders(*, order_items(*, products(*), order_item_compositions(*)))")
         .eq("id", transactionId)
         .single()
 

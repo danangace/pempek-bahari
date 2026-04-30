@@ -3,6 +3,7 @@ import { Link } from "react-router-dom"
 import { useOrders } from "@/hooks/use-orders"
 import { useCampaigns } from "@/hooks/use-campaigns"
 import { useBankAccounts } from "@/hooks/use-bank-accounts"
+import { useDeliveryTypes } from "@/hooks/use-delivery-types"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { OrderStatusBadge } from "@/components/order-status-badge"
 import { Button } from "@/components/ui/button"
@@ -44,7 +45,7 @@ import { formatPrice, shortId, waLink } from "@/lib/utils"
 import { supabase } from "@/lib/supabase"
 import { useProducts } from "@/hooks/use-products"
 import { usePempekTypes } from "@/hooks/use-pempek-types"
-import type { BankAccount, Campaign, OrderStatus, OrderWithItems, Product } from "@/types"
+import type { BankAccount, Campaign, DeliveryTypeOption, OrderStatus, OrderWithItems, Product } from "@/types"
 import { computeOrderItemUnitPrice, computeUnitPrice } from "@/types"
 import { toast } from "sonner"
 
@@ -280,6 +281,51 @@ function BankAccountCell({
           <SelectItem key={ba.id} value={ba.id}>
             <span className="font-medium">{ba.bank_name}</span>{" "}
             <span className="text-muted-foreground">{ba.account_number}</span>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  )
+}
+
+function DeliveryTypeCell({
+  order,
+  deliveryTypes,
+  onSave,
+}: {
+  order: OrderWithItems
+  deliveryTypes: DeliveryTypeOption[]
+  onSave: (deliveryTypeId: string | null) => Promise<void>
+}) {
+  const current = order.transactions?.delivery_type_id ?? ""
+  const [saving, setSaving] = React.useState(false)
+
+  async function handleChange(val: string) {
+    setSaving(true)
+    try {
+      await onSave(val || null)
+    } catch {
+      toast.error("Gagal menyimpan jenis pengiriman")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const activeTypes = deliveryTypes.filter((dt) => dt.is_active)
+  const currentType = deliveryTypes.find((dt) => dt.id === current)
+  const options = currentType && !currentType.is_active
+    ? [currentType, ...activeTypes]
+    : activeTypes
+
+  return (
+    <Select value={current} onValueChange={(val) => void handleChange(val)} disabled={saving}>
+      <SelectTrigger className="h-7 w-[160px] text-xs">
+        <SelectValue placeholder="Pilih jenis" />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((dt) => (
+          <SelectItem key={dt.id} value={dt.id}>
+            {dt.name}
           </SelectItem>
         ))}
       </SelectContent>
@@ -572,10 +618,11 @@ function SpecialOrderDialog({
 }
 
 export function AdminDashboardPage() {
-  const { orders, loading, error, updateStatus, markTransactionPaid, setDeliveryCost, setDiscount, setBankAccount, refetch } =
+  const { orders, loading, error, updateStatus, markTransactionPaid, setDeliveryCost, setDiscount, setBankAccount, setDeliveryType, refetch } =
     useOrders()
   const { campaigns } = useCampaigns()
   const { bankAccounts } = useBankAccounts()
+  const { deliveryTypes } = useDeliveryTypes()
   const { pempekTypes } = usePempekTypes(false)
   const typeNames = React.useMemo(
     () => new Map(pempekTypes.map((t) => [t.id, t.name])),
@@ -586,6 +633,8 @@ export function AdminDashboardPage() {
   const [pendingTab, setPendingTab] = React.useState("all")
   const [filterDrawerOpen, setFilterDrawerOpen] = React.useState(false)
   const [campaignFilter, setCampaignFilter] = React.useState("all")
+  const [deliveryTypeFilter, setDeliveryTypeFilter] = React.useState("all")
+  const [pendingDeliveryType, setPendingDeliveryType] = React.useState("all")
   const [searchQuery, setSearchQuery] = React.useState("")
   const [updatingId, setUpdatingId] = React.useState<string | null>(null)
   const [showSpecialOrderDialog, setShowSpecialOrderDialog] = React.useState(false)
@@ -602,17 +651,24 @@ export function AdminDashboardPage() {
       return o.campaign_id === campaignFilter
     })
     .filter((o) => {
+      if (deliveryTypeFilter === "all") return true
+      if (deliveryTypeFilter === "none") return !o.transactions?.delivery_type_id
+      return o.transactions?.delivery_type_id === deliveryTypeFilter
+    })
+    .filter((o) => {
       if (!searchQuery.trim()) return true
       return o.customer_name.toLowerCase().includes(searchQuery.toLowerCase())
     })
 
   function openFilterDrawer() {
     setPendingTab(activeTab)
+    setPendingDeliveryType(deliveryTypeFilter)
     setFilterDrawerOpen(true)
   }
 
   function applyFilter() {
     setActiveTab(pendingTab)
+    setDeliveryTypeFilter(pendingDeliveryType)
     setFilterDrawerOpen(false)
   }
 
@@ -662,10 +718,10 @@ export function AdminDashboardPage() {
           className="flex-1"
         />
         <Button
-          variant={activeTab !== "all" ? "default" : "outline"}
+          variant={activeTab !== "all" || deliveryTypeFilter !== "all" ? "default" : "outline"}
           size="icon"
           onClick={openFilterDrawer}
-          title="Filter status"
+          title="Filter"
         >
           <HugeiconsIcon icon={FilterIcon} className="h-4 w-4" />
         </Button>
@@ -692,16 +748,27 @@ export function AdminDashboardPage() {
         </div>
       )}
 
-      {/* Active filter label */}
-      {activeTab !== "all" && (
-        <div className="mb-3 flex items-center gap-1.5 text-sm">
-          <span className="text-muted-foreground">Filter:</span>
-          <span className="font-medium">{STATUS_TABS.find((t) => t.value === activeTab)?.label}</span>
+      {/* Active filter labels */}
+      {(activeTab !== "all" || deliveryTypeFilter !== "all") && (
+        <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+          <span className="text-muted-foreground">Filter aktif:</span>
+          {activeTab !== "all" && (
+            <span className="font-medium">
+              {STATUS_TABS.find((t) => t.value === activeTab)?.label}
+            </span>
+          )}
+          {deliveryTypeFilter !== "all" && (
+            <span className="font-medium">
+              {deliveryTypeFilter === "none"
+                ? "Belum Ditentukan"
+                : (deliveryTypes.find((dt) => dt.id === deliveryTypeFilter)?.name ?? "")}
+            </span>
+          )}
           <button
-            onClick={() => setActiveTab("all")}
-            className="ml-1 text-xs text-muted-foreground underline-offset-2 hover:underline"
+            onClick={() => { setActiveTab("all"); setDeliveryTypeFilter("all") }}
+            className="text-xs text-muted-foreground underline-offset-2 hover:underline"
           >
-            Hapus
+            Hapus semua
           </button>
         </div>
       )}
@@ -711,27 +778,48 @@ export function AdminDashboardPage() {
         <Drawer open={filterDrawerOpen} onOpenChange={setFilterDrawerOpen}>
           <DrawerContent>
             <DrawerHeader>
-              <DrawerTitle>Filter Status</DrawerTitle>
+              <DrawerTitle>Filter</DrawerTitle>
             </DrawerHeader>
-            <div className="space-y-2 px-4 pb-2">
-              {STATUS_TABS.map((tab) => (
-                <button
-                  key={tab.value}
-                  onClick={() => setPendingTab(tab.value)}
-                  className={`w-full rounded-lg border px-4 py-2.5 text-left text-sm transition-colors ${
-                    pendingTab === tab.value
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border bg-background text-foreground"
-                  }`}
-                >
-                  {tab.label}
-                  {tab.value !== "all" && (
-                    <span className="ml-1 text-xs opacity-70">
-                      ({orders.filter((o) => o.status === tab.value).length})
-                    </span>
-                  )}
-                </button>
-              ))}
+            <div className="space-y-4 px-4 pb-2">
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Status Pesanan</Label>
+                <Select value={pendingTab} onValueChange={setPendingTab}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STATUS_TABS.map((tab) => (
+                      <SelectItem key={tab.value} value={tab.value}>
+                        {tab.label}
+                        {tab.value !== "all" && (
+                          <span className="ml-1 text-xs opacity-60">
+                            ({orders.filter((o) => o.status === tab.value).length})
+                          </span>
+                        )}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {deliveryTypes.length > 0 && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Jenis Pengiriman</Label>
+                  <Select value={pendingDeliveryType} onValueChange={setPendingDeliveryType}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Semua Pengiriman</SelectItem>
+                      <SelectItem value="none">Belum Ditentukan</SelectItem>
+                      {deliveryTypes.map((dt) => (
+                        <SelectItem key={dt.id} value={dt.id}>
+                          {dt.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
             <div className="px-4 pb-6 pt-3">
               <button
@@ -747,27 +835,48 @@ export function AdminDashboardPage() {
         <Dialog open={filterDrawerOpen} onOpenChange={setFilterDrawerOpen}>
           <DialogContent className="max-w-sm">
             <DialogHeader>
-              <DialogTitle>Filter Status</DialogTitle>
+              <DialogTitle>Filter</DialogTitle>
             </DialogHeader>
-            <div className="space-y-2">
-              {STATUS_TABS.map((tab) => (
-                <button
-                  key={tab.value}
-                  onClick={() => setPendingTab(tab.value)}
-                  className={`w-full rounded-lg border px-4 py-2.5 text-left text-sm transition-colors ${
-                    pendingTab === tab.value
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border bg-background text-foreground hover:bg-muted"
-                  }`}
-                >
-                  {tab.label}
-                  {tab.value !== "all" && (
-                    <span className="ml-1 text-xs opacity-70">
-                      ({orders.filter((o) => o.status === tab.value).length})
-                    </span>
-                  )}
-                </button>
-              ))}
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Status Pesanan</Label>
+                <Select value={pendingTab} onValueChange={setPendingTab}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STATUS_TABS.map((tab) => (
+                      <SelectItem key={tab.value} value={tab.value}>
+                        {tab.label}
+                        {tab.value !== "all" && (
+                          <span className="ml-1 text-xs opacity-60">
+                            ({orders.filter((o) => o.status === tab.value).length})
+                          </span>
+                        )}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {deliveryTypes.length > 0 && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Jenis Pengiriman</Label>
+                  <Select value={pendingDeliveryType} onValueChange={setPendingDeliveryType}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Semua Pengiriman</SelectItem>
+                      <SelectItem value="none">Belum Ditentukan</SelectItem>
+                      {deliveryTypes.map((dt) => (
+                        <SelectItem key={dt.id} value={dt.id}>
+                          {dt.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
             <DialogFooter>
               <Button variant="ghost" onClick={() => setFilterDrawerOpen(false)}>Batal</Button>
@@ -807,6 +916,7 @@ export function AdminDashboardPage() {
                 <TableHead>Diskon</TableHead>
                 <TableHead>Ongkir</TableHead>
                 <TableHead>Rekening</TableHead>
+                <TableHead>Pengiriman</TableHead>
                 <TableHead>Bayar</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Aksi</TableHead>
@@ -869,6 +979,13 @@ export function AdminDashboardPage() {
                         order={order}
                         bankAccounts={bankAccounts}
                         onSave={(bankAccountId) => setBankAccount(order.id, bankAccountId)}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <DeliveryTypeCell
+                        order={order}
+                        deliveryTypes={deliveryTypes}
+                        onSave={(deliveryTypeId) => setDeliveryType(order.id, deliveryTypeId)}
                       />
                     </TableCell>
                     <TableCell>

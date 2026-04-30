@@ -12,6 +12,7 @@ interface UseOrdersResult {
   setDeliveryCost: (orderId: string, cost: number | null) => Promise<void>
   setDiscount: (orderId: string, discount: number | null) => Promise<void>
   setBankAccount: (orderId: string, bankAccountId: string | null) => Promise<void>
+  setDeliveryType: (orderId: string, deliveryTypeId: string | null) => Promise<void>
 }
 
 export function useOrders(): UseOrdersResult {
@@ -29,7 +30,7 @@ export function useOrders(): UseOrdersResult {
 
       const { data, error: fetchError } = await supabase
         .from("orders")
-        .select("*, order_items(*, order_item_compositions(*)), transactions(id, is_paid, delivery_cost, discount, bank_account_id, bank_accounts(id, name, bank_name, account_number))")
+        .select("*, order_items(*, order_item_compositions(*)), transactions(id, is_paid, delivery_cost, discount, bank_account_id, bank_accounts(id, name, bank_name, account_number), delivery_type_id, delivery_types(id, name, is_active))")
         .order("created_at", { ascending: false })
 
       if (cancelled) return
@@ -92,6 +93,8 @@ export function useOrders(): UseOrdersResult {
             discount: existing?.discount ?? null,
             bank_account_id: existing?.bank_account_id ?? null,
             bank_accounts: existing?.bank_accounts ?? null,
+            delivery_type_id: existing?.delivery_type_id ?? null,
+            delivery_types: existing?.delivery_types ?? null,
           },
         }
       })
@@ -120,6 +123,8 @@ export function useOrders(): UseOrdersResult {
               discount: existing?.discount ?? null,
               bank_account_id: existing?.bank_account_id ?? null,
               bank_accounts: existing?.bank_accounts ?? null,
+              delivery_type_id: existing?.delivery_type_id ?? null,
+              delivery_types: existing?.delivery_types ?? null,
             },
           }
         })
@@ -150,6 +155,8 @@ export function useOrders(): UseOrdersResult {
               discount,
               bank_account_id: existing?.bank_account_id ?? null,
               bank_accounts: existing?.bank_accounts ?? null,
+              delivery_type_id: existing?.delivery_type_id ?? null,
+              delivery_types: existing?.delivery_types ?? null,
             },
           }
         })
@@ -173,5 +180,20 @@ export function useOrders(): UseOrdersResult {
     []
   )
 
-  return { orders, loading, error, refetch, updateStatus, markTransactionPaid, setDeliveryCost, setDiscount, setBankAccount }
+  const setDeliveryType = React.useCallback(
+    async (orderId: string, deliveryTypeId: string | null) => {
+      const { error: updateError } = await supabase
+        .from("transactions")
+        .update({ delivery_type_id: deliveryTypeId })
+        .eq("order_id", orderId)
+
+      if (updateError) throw new Error(updateError.message)
+
+      // Refetch to get delivery_types join populated
+      setTick((t) => t + 1)
+    },
+    []
+  )
+
+  return { orders, loading, error, refetch, updateStatus, markTransactionPaid, setDeliveryCost, setDiscount, setBankAccount, setDeliveryType }
 }

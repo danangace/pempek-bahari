@@ -12,6 +12,7 @@ import { AdminDashboardPage } from "@/pages/admin/dashboard"
 import { AdminCampaignsPage } from "@/pages/admin/campaigns"
 import { AdminPempekTypesPage } from "@/pages/admin/pempek-types"
 import { ProductionPlanPage } from "@/pages/admin/production-plan"
+import { AdminDeliveryTypesPage } from "@/pages/admin/delivery-types"
 import { InvoicePage } from "@/pages/invoice"
 
 function PublicLayout() {
@@ -53,6 +54,7 @@ function AppRoutes() {
           <Route path="/admin/campaigns" element={<AdminCampaignsPage />} />
           <Route path="/admin/pempek-types" element={<AdminPempekTypesPage />} />
           <Route path="/admin/production-plan" element={<ProductionPlanPage />} />
+          <Route path="/admin/delivery-types" element={<AdminDeliveryTypesPage />} />
         </Route>
       </Route>
     </Routes>

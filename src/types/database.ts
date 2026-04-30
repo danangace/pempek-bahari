@@ -194,6 +194,26 @@ export interface Database {
           quantity?: number
         }
       }
+      delivery_types: {
+        Row: {
+          id: string
+          name: string
+          is_active: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          is_active?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          is_active?: boolean
+          created_at?: string
+        }
+      }
       transactions: {
         Row: {
           id: string
@@ -201,6 +221,9 @@ export interface Database {
           is_paid: boolean
           paid_at: string | null
           delivery_cost: number | null
+          discount: number | null
+          bank_account_id: string | null
+          delivery_type_id: string | null
           created_at: string
         }
         Insert: {
@@ -209,6 +232,9 @@ export interface Database {
           is_paid?: boolean
           paid_at?: string | null
           delivery_cost?: number | null
+          discount?: number | null
+          bank_account_id?: string | null
+          delivery_type_id?: string | null
           created_at?: string
         }
         Update: {
@@ -217,6 +243,9 @@ export interface Database {
           is_paid?: boolean
           paid_at?: string | null
           delivery_cost?: number | null
+          discount?: number | null
+          bank_account_id?: string | null
+          delivery_type_id?: string | null
           created_at?: string
         }
       }
