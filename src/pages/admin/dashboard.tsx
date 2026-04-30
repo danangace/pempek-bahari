@@ -970,7 +970,7 @@ export function AdminDashboardPage() {
                         className="text-primary underline-offset-2 hover:underline"
                         onClick={() => setItemsDialogOrder(order)}
                       >
-                        {order.order_items.length} item
+                        {order.order_items.reduce((sum, i) => sum + i.quantity, 0)} item
                       </button>
                     </TableCell>
                     <TableCell className="font-medium whitespace-nowrap">
