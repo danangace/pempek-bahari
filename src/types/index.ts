@@ -200,3 +200,27 @@ export interface CheckoutFormData {
   address: string
   note: string
 }
+
+// ---------------------------------------------------------------------------
+// Production log types
+// ---------------------------------------------------------------------------
+
+/** Append-only log entry: one batch of pempek cooked for a campaign */
+export interface ProductionEntry {
+  id: string
+  campaign_id: string
+  pempek_type_id: string
+  quantity_pcs: number
+  note: string | null
+  produced_at: string
+}
+
+/** Append-only log entry: one packaging round for a campaign */
+export interface PackagingEntry {
+  id: string
+  campaign_id: string
+  product_id: string
+  quantity_packs: number
+  note: string | null
+  packaged_at: string
+}
