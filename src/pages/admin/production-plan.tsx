@@ -509,7 +509,7 @@ export function ProductionPlanPage() {
     campaignFilter !== "all" && campaignFilter !== "none"
 
   const activeOrders = orders
-    .filter((o) => o.status === "pending" || o.status === "in_production")
+    .filter((o) => o.status !== "cancelled")
     .filter((o) => {
       if (campaignFilter === "all") return true
       if (campaignFilter === "none") return !o.campaign_id
@@ -528,8 +528,7 @@ export function ProductionPlanPage() {
       <div className="mb-6">
         <h1 className="text-xl font-semibold">Rencana Produksi</h1>
         <p className="text-sm text-muted-foreground">
-          Berdasarkan pesanan berstatus <em>Menunggu Diproses</em> dan{" "}
-          <em>Sedang Diproses</em>
+          Berdasarkan semua pesanan kecuali yang <em>Dibatalkan</em>
         </p>
       </div>
 

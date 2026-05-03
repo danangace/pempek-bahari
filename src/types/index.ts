@@ -122,6 +122,7 @@ export interface Transaction {
   paid_at: string | null
   delivery_cost: number | null
   discount: number | null
+  cash_advance: number | null
   bank_account_id: string | null
   bank_accounts?: BankAccount | null
   delivery_type_id: string | null
@@ -176,6 +177,7 @@ export interface TransactionSummary {
   is_paid: boolean
   delivery_cost: number | null
   discount: number | null
+  cash_advance: number | null
   bank_account_id: string | null
   bank_accounts?: BankAccount | null
   delivery_type_id: string | null

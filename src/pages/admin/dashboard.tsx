@@ -75,6 +75,7 @@ function buildAdminWhatsAppMessage(order: OrderWithItems): string {
 
   const deliveryCost = order.transactions?.delivery_cost ?? null
   const discount = order.transactions?.discount ?? null
+  const cashAdvance = order.transactions?.cash_advance ?? null
   const grandTotal = order.total_amount - (discount ?? 0) + (deliveryCost ?? 0)
   const transactionId = order.transactions?.id
   const invoiceLine = transactionId
@@ -84,6 +85,14 @@ function buildAdminWhatsAppMessage(order: OrderWithItems): string {
   const discountLine = discount != null && discount > 0
     ? [`*Diskon:* -${formatPrice(discount)}`]
     : []
+
+  const cashAdvanceLines =
+    cashAdvance != null && cashAdvance > 0 && deliveryCost != null
+      ? [
+          `*Pembayaran DP:* ${formatPrice(cashAdvance)}`,
+          `*Sisa yang Harus Dibayar:* ${formatPrice(grandTotal - cashAdvance)}`,
+        ]
+      : []
 
   const bankLines = bank
     ? [
@@ -110,6 +119,7 @@ function buildAdminWhatsAppMessage(order: OrderWithItems): string {
     ...discountLine,
     `*Ongkir:* ${deliveryCost != null ? formatPrice(deliveryCost) : "belum ditentukan"}`,
     `*Total yang Harus Dibayar:* ${deliveryCost != null ? formatPrice(grandTotal) : "-"}`,
+    ...cashAdvanceLines,
     ``,
     `*Link Invoice:* ${invoiceLine}`,
     ``,
@@ -244,6 +254,74 @@ function DiscountCell({
 interface SpecialOrderItem {
   product: Product
   quantity: number
+}
+
+function CashAdvanceCell({
+  order,
+  onSave,
+}: {
+  order: OrderWithItems
+  onSave: (cashAdvance: number | null) => Promise<void>
+}) {
+  const initial = order.transactions?.cash_advance ?? null
+  const [editing, setEditing] = React.useState(false)
+  const [value, setValue] = React.useState(initial !== null ? String(initial) : "")
+  const [saving, setSaving] = React.useState(false)
+
+  React.useEffect(() => {
+    setValue(initial !== null ? String(initial) : "")
+  }, [initial])
+
+  const isDirty = value !== (initial !== null ? String(initial) : "")
+
+  async function handleSave() {
+    setSaving(true)
+    try {
+      const cashAdvance = value === "" ? null : Number(value)
+      await onSave(cashAdvance)
+      toast.success("Pembayaran DP disimpan")
+      setEditing(false)
+    } catch {
+      toast.error("Gagal menyimpan pembayaran DP")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (initial !== null && !editing) {
+    return (
+      <button
+        className="text-sm hover:underline underline-offset-2"
+        onClick={() => setEditing(true)}
+      >
+        {formatPrice(initial)}
+      </button>
+    )
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      <Input
+        type="number"
+        min={0}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        placeholder="0"
+        className="h-7 w-24 text-xs"
+        autoFocus={editing}
+      />
+      {isDirty && (
+        <Button size="sm" variant="outline" className="h-7 px-2 text-xs" disabled={saving} onClick={handleSave}>
+          Simpan
+        </Button>
+      )}
+      {editing && !isDirty && (
+        <button onClick={() => setEditing(false)} className="text-xs text-muted-foreground hover:text-foreground">
+          batal
+        </button>
+      )}
+    </div>
+  )
 }
 
 function BankAccountCell({
@@ -617,7 +695,7 @@ function SpecialOrderDialog({
 }
 
 export function AdminDashboardPage() {
-  const { orders, loading, error, updateStatus, markTransactionPaid, setDeliveryCost, setDiscount, setBankAccount, setDeliveryType, refetch } =
+  const { orders, loading, error, updateStatus, markTransactionPaid, setDeliveryCost, setDiscount, setCashAdvance, setBankAccount, setDeliveryType, refetch } =
     useOrders()
   const { campaigns } = useCampaigns()
   const { bankAccounts } = useBankAccounts()
@@ -914,6 +992,7 @@ export function AdminDashboardPage() {
                 <TableHead>Item</TableHead>
                 <TableHead>Subtotal</TableHead>
                 <TableHead>Diskon</TableHead>
+                <TableHead>Pembayaran DP</TableHead>
                 <TableHead>Ongkir</TableHead>
                 <TableHead>Rekening</TableHead>
                 <TableHead>Pengiriman</TableHead>
@@ -980,6 +1059,12 @@ export function AdminDashboardPage() {
                       <DiscountCell
                         order={order}
                         onSave={(discount) => setDiscount(order.id, discount)}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <CashAdvanceCell
+                        order={order}
+                        onSave={(cashAdvance) => setCashAdvance(order.id, cashAdvance)}
                       />
                     </TableCell>
                     <TableCell>

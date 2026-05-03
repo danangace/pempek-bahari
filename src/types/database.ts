@@ -222,6 +222,7 @@ export interface Database {
           paid_at: string | null
           delivery_cost: number | null
           discount: number | null
+          cash_advance: number | null
           bank_account_id: string | null
           delivery_type_id: string | null
           created_at: string
@@ -233,6 +234,7 @@ export interface Database {
           paid_at?: string | null
           delivery_cost?: number | null
           discount?: number | null
+          cash_advance?: number | null
           bank_account_id?: string | null
           delivery_type_id?: string | null
           created_at?: string
@@ -244,6 +246,7 @@ export interface Database {
           paid_at?: string | null
           delivery_cost?: number | null
           discount?: number | null
+          cash_advance?: number | null
           bank_account_id?: string | null
           delivery_type_id?: string | null
           created_at?: string

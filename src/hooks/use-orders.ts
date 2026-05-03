@@ -11,6 +11,7 @@ interface UseOrdersResult {
   markTransactionPaid: (orderId: string) => Promise<void>
   setDeliveryCost: (orderId: string, cost: number | null) => Promise<void>
   setDiscount: (orderId: string, discount: number | null) => Promise<void>
+  setCashAdvance: (orderId: string, cashAdvance: number | null) => Promise<void>
   setBankAccount: (orderId: string, bankAccountId: string | null) => Promise<void>
   setDeliveryType: (orderId: string, deliveryTypeId: string | null) => Promise<void>
 }
@@ -30,7 +31,7 @@ export function useOrders(): UseOrdersResult {
 
       const { data, error: fetchError } = await supabase
         .from("orders")
-        .select("*, order_items(*, order_item_compositions(*)), transactions(id, is_paid, delivery_cost, discount, bank_account_id, bank_accounts(id, name, bank_name, account_number), delivery_type_id, delivery_types(id, name, is_active))")
+        .select("*, order_items(*, order_item_compositions(*)), transactions(id, is_paid, delivery_cost, discount, cash_advance, bank_account_id, bank_accounts(id, name, bank_name, account_number), delivery_type_id, delivery_types(id, name, is_active))")
         .order("created_at", { ascending: false })
 
       if (cancelled) return
@@ -91,6 +92,7 @@ export function useOrders(): UseOrdersResult {
             is_paid: true,
             delivery_cost: existing?.delivery_cost ?? null,
             discount: existing?.discount ?? null,
+            cash_advance: existing?.cash_advance ?? null,
             bank_account_id: existing?.bank_account_id ?? null,
             bank_accounts: existing?.bank_accounts ?? null,
             delivery_type_id: existing?.delivery_type_id ?? null,
@@ -121,6 +123,7 @@ export function useOrders(): UseOrdersResult {
               is_paid: existing?.is_paid ?? false,
               delivery_cost: cost,
               discount: existing?.discount ?? null,
+              cash_advance: existing?.cash_advance ?? null,
               bank_account_id: existing?.bank_account_id ?? null,
               bank_accounts: existing?.bank_accounts ?? null,
               delivery_type_id: existing?.delivery_type_id ?? null,
@@ -153,6 +156,40 @@ export function useOrders(): UseOrdersResult {
               is_paid: existing?.is_paid ?? false,
               delivery_cost: existing?.delivery_cost ?? null,
               discount,
+              cash_advance: existing?.cash_advance ?? null,
+              bank_account_id: existing?.bank_account_id ?? null,
+              bank_accounts: existing?.bank_accounts ?? null,
+              delivery_type_id: existing?.delivery_type_id ?? null,
+              delivery_types: existing?.delivery_types ?? null,
+            },
+          }
+        })
+      )
+    },
+    []
+  )
+
+  const setCashAdvance = React.useCallback(
+    async (orderId: string, cashAdvance: number | null) => {
+      const { error: updateError } = await supabase
+        .from("transactions")
+        .update({ cash_advance: cashAdvance })
+        .eq("order_id", orderId)
+
+      if (updateError) throw new Error(updateError.message)
+
+      setOrders((prev) =>
+        prev.map((o) => {
+          if (o.id !== orderId) return o
+          const existing = o.transactions
+          return {
+            ...o,
+            transactions: {
+              id: existing?.id ?? "",
+              is_paid: existing?.is_paid ?? false,
+              delivery_cost: existing?.delivery_cost ?? null,
+              discount: existing?.discount ?? null,
+              cash_advance: cashAdvance,
               bank_account_id: existing?.bank_account_id ?? null,
               bank_accounts: existing?.bank_accounts ?? null,
               delivery_type_id: existing?.delivery_type_id ?? null,
@@ -195,5 +232,5 @@ export function useOrders(): UseOrdersResult {
     []
   )
 
-  return { orders, loading, error, refetch, updateStatus, markTransactionPaid, setDeliveryCost, setDiscount, setBankAccount, setDeliveryType }
+  return { orders, loading, error, refetch, updateStatus, markTransactionPaid, setDeliveryCost, setDiscount, setCashAdvance, setBankAccount, setDeliveryType }
 }

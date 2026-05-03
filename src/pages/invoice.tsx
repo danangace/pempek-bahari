@@ -47,7 +47,9 @@ export function InvoicePage() {
   const subtotal = order.total_amount
   const deliveryCost = invoice.delivery_cost
   const discount = invoice.discount
+  const cashAdvance = invoice.cash_advance
   const grandTotal = subtotal - (discount ?? 0) + (deliveryCost ?? 0)
+  const remaining = cashAdvance != null && cashAdvance > 0 ? grandTotal - cashAdvance : null
 
   return (
     <main className="mx-auto max-w-lg px-4 py-8">
@@ -152,6 +154,18 @@ export function InvoicePage() {
             </span>
           )}
         </div>
+        {remaining !== null && deliveryCost !== null && (
+          <>
+            <div className="flex justify-between text-sm text-muted-foreground">
+              <span>Pembayaran DP</span>
+              <span>−{formatPrice(cashAdvance!)}</span>
+            </div>
+            <div className="flex justify-between font-semibold text-amber-600 dark:text-amber-400">
+              <span>Sisa Pembayaran</span>
+              <span>{formatPrice(remaining)}</span>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Bank transfer info — only show when unpaid and bank account is set */}
