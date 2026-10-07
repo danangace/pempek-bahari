@@ -141,9 +141,11 @@ function OngkirCell({
   const [saving, setSaving] = React.useState(false)
 
   // Sync if prop changes (e.g. after refetch)
-  React.useEffect(() => {
+  const [prevInitial, setPrevInitial] = React.useState(initial)
+  if (prevInitial !== initial) {
+    setPrevInitial(initial)
     setValue(initial !== null ? String(initial) : "")
-  }, [initial])
+  }
 
   const isDirty = value !== (initial !== null ? String(initial) : "")
 
@@ -202,9 +204,12 @@ function DiscountCell({
   const [value, setValue] = React.useState(initial !== null ? String(initial) : "")
   const [saving, setSaving] = React.useState(false)
 
-  React.useEffect(() => {
+  // Sync if prop changes (e.g. after refetch)
+  const [prevInitial, setPrevInitial] = React.useState(initial)
+  if (prevInitial !== initial) {
+    setPrevInitial(initial)
     setValue(initial !== null ? String(initial) : "")
-  }, [initial])
+  }
 
   const isDirty = value !== (initial !== null ? String(initial) : "")
 
@@ -268,9 +273,12 @@ function CashAdvanceCell({
   const [value, setValue] = React.useState(initial !== null ? String(initial) : "")
   const [saving, setSaving] = React.useState(false)
 
-  React.useEffect(() => {
+  // Sync if prop changes (e.g. after refetch)
+  const [prevInitial, setPrevInitial] = React.useState(initial)
+  if (prevInitial !== initial) {
+    setPrevInitial(initial)
     setValue(initial !== null ? String(initial) : "")
-  }, [initial])
+  }
 
   const isDirty = value !== (initial !== null ? String(initial) : "")
 
@@ -486,7 +494,8 @@ function SpecialOrderDialog({
   onSuccess: () => void
 }) {
   const { products } = useProducts()
-  const [campaignId, setCampaignId] = React.useState("")
+  const [selectedCampaignId, setCampaignId] = React.useState("")
+  const campaignId = selectedCampaignId || productionCampaigns[0]?.id || ""
   const [customerName, setCustomerName] = React.useState("")
   const [whatsapp, setWhatsapp] = React.useState("")
   const [address, setAddress] = React.useState("")
@@ -494,11 +503,6 @@ function SpecialOrderDialog({
   const [items, setItems] = React.useState<SpecialOrderItem[]>([])
   const [submitting, setSubmitting] = React.useState(false)
 
-  React.useEffect(() => {
-    if (open && productionCampaigns.length > 0) {
-      setCampaignId(productionCampaigns[0].id)
-    }
-  }, [open, productionCampaigns])
 
   function reset() {
     setCustomerName("")

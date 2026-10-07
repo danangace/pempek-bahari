@@ -39,6 +39,7 @@ export function useCampaignQuota(campaign: Campaign | null): UseCampaignQuotaRes
         )
         .eq("orders.campaign_id", campaignId)
         .neq("orders.status", "cancelled")
+        .eq("orders.deleted", 0)
         .eq("products.category", "pempek")
 
       if (cancelled) return

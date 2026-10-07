@@ -6,14 +6,18 @@ import { useCampaignQuota } from "@/hooks/use-campaign-quota"
 import { useActiveCampaign } from "@/hooks/use-active-campaign"
 import { ProductCard } from "@/components/product-card"
 import { MixCustomPicker } from "@/components/mix-custom-picker"
+import { Button } from "@/components/ui/button"
+import { getImageUrl } from "@/lib/storage"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { CartItemComposition, Product } from "@/types"
+import { Store01Icon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
 import { toast } from "sonner"
 
 function ClosedShopPage() {
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 text-center">
-      <div className="mb-6 text-7xl select-none">🛒</div>
+      <HugeiconsIcon icon={Store01Icon} className="mb-6 size-16 text-muted-foreground" />
       <h1 className="mb-3 text-2xl font-semibold">Pemesanan Belum Dibuka</h1>
       <p className="max-w-sm text-muted-foreground">
         Pemesanan masih belum dibuka, tetap pantau Social Media kami untuk
@@ -23,46 +27,59 @@ function ClosedShopPage() {
   )
 }
 
-function formatDateRange(start: string, end: string) {
+function Hero({ campaign }: { campaign: import("@/types").Campaign }) {
   const fmt = (d: string) =>
-    new Date(d).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" })
-  return `${fmt(start)} – ${fmt(end)}`
-}
+    new Date(d).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })
 
-function CampaignBanner({ campaign }: { campaign: import("@/types").Campaign }) {
   return (
-    <div className="mb-8 rounded-xl border border-border bg-muted/40 px-4 py-4">
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">
-        Campaign Aktif
-      </p>
-      <h2 className="text-base font-semibold">{campaign.name}</h2>
-      {campaign.description && (
-        <p className="mt-1 text-sm text-muted-foreground">{campaign.description}</p>
-      )}
-      <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1.5 text-sm">
-        <div>
-          <span className="text-muted-foreground">Periode Pemesanan: </span>
-          <span className="font-medium">
-            {formatDateRange(campaign.purchase_start_date, campaign.purchase_end_date)}
-          </span>
-        </div>
-        {campaign.start_delivery_date && (
+    <section className="mb-12 grid items-center gap-6 md:grid-cols-2 md:gap-10">
+      <div className="order-2 md:order-1">
+        <p className="mb-3 inline-flex items-center gap-2 text-sm font-medium text-primary">
+          <span className="size-2 rounded-full bg-primary" aria-hidden />
+          Pre-order dibuka
+        </p>
+        <h1 className="text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
+          Pempek ikan tenggiri fresh,{" "}
+          <em className="font-semibold text-primary">Hand Made.</em>
+        </h1>
+        <p className="mt-3 max-w-prose text-muted-foreground text-pretty">
+          {campaign.description ??
+            "Bahan berkualitas, dipilih yang terbaik. Pilih paket yang sudah ada atau racik isian sesukamu."}
+        </p>
+
+        <dl className="mt-5 grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
           <div>
-            <span className="text-muted-foreground">Mulai Pengiriman: </span>
-            <span className="font-medium">
-              {new Date(campaign.start_delivery_date).toLocaleDateString("id-ID", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-              })}
-            </span>
+            <dt className="text-muted-foreground">Periode pemesanan</dt>
+            <dd className="font-medium">
+              {fmt(campaign.purchase_start_date)} – {fmt(campaign.purchase_end_date)}
+            </dd>
           </div>
-        )}
+          {campaign.start_delivery_date && (
+            <div>
+              <dt className="text-muted-foreground">Mulai pengiriman</dt>
+              <dd className="font-medium">{fmt(campaign.start_delivery_date)}</dd>
+            </div>
+          )}
+        </dl>
+
+        <Button asChild size="lg" className="mt-6">
+          <a href="#menu">Mulai pesan</a>
+        </Button>
       </div>
-    </div>
+
+      <div className="order-1 md:order-2">
+        <img
+          src={getImageUrl("mix.webp")}
+          alt="Aneka pempek ikan tenggiri dengan kuah cuko"
+          className="aspect-[4/3] w-full rounded-2xl object-cover md:aspect-square"
+          onError={(e) => {
+            ;(e.currentTarget as HTMLImageElement).style.display = "none"
+          }}
+        />
+      </div>
+    </section>
   )
 }
-
 
 export function HomePage() {
   const { products, loading: productsLoading, error } = useProducts()
@@ -126,7 +143,7 @@ export function HomePage() {
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8">
-      <CampaignBanner campaign={campaign} />
+      <Hero campaign={campaign} />
       {quota.isFull && (
         <p className="mb-6 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           Kuota produksi untuk sementara sudah penuh, sehingga belum bisa melakukan pembelian.
@@ -145,9 +162,10 @@ export function HomePage() {
         </div>
       ) : (
         <>
+          <div id="menu" className="scroll-mt-20" />
           {pempek.length > 0 && (
             <section className="mb-10">
-              <h2 className="mb-4 text-lg font-medium">Pempek</h2>
+              <h2 className="mb-4 text-lg font-semibold tracking-tight">Pempek</h2>
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
                 {pempek.map((product) => (
                   <ProductCard
@@ -163,7 +181,7 @@ export function HomePage() {
 
           {pelengkap.length > 0 && (
             <section>
-              <h2 className="mb-4 text-lg font-medium">Pelengkap</h2>
+              <h2 className="mb-4 text-lg font-semibold tracking-tight">Pelengkap</h2>
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
                 {pelengkap.map((product) => (
                   <ProductCard

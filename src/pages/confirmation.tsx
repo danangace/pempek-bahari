@@ -3,6 +3,8 @@ import { useParams, useLocation, Link } from "react-router-dom"
 import { useOrder } from "@/hooks/use-order"
 import { WhatsAppButton } from "@/components/whatsapp-button"
 import { OrderStatusBadge } from "@/components/order-status-badge"
+import { CheckmarkCircle02Icon, Invoice01Icon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -43,10 +45,14 @@ export function ConfirmationPage() {
     )
   }
 
-  if (error || !order) {
+  if (error || !order || order.deleted === 1) {
     return (
       <main className="mx-auto max-w-lg px-4 py-16 text-center">
-        <p className="text-muted-foreground">Pesanan tidak ditemukan.</p>
+        <p className="text-muted-foreground">
+          {order?.deleted === 1
+            ? "Pesanan ini sudah dibatalkan dan tidak tersedia lagi."
+            : "Pesanan tidak ditemukan."}
+        </p>
         <Button asChild className="mt-4">
           <Link to="/">Kembali ke Menu</Link>
         </Button>
@@ -57,8 +63,8 @@ export function ConfirmationPage() {
   return (
     <main className="mx-auto max-w-lg px-4 py-8">
       <div className="mb-6 text-center">
-        <p className="text-4xl">🎉</p>
-        <h1 className="mt-3 text-xl font-semibold">Pesanan Berhasil!</h1>
+        <HugeiconsIcon icon={CheckmarkCircle02Icon} className="mx-auto size-12 text-primary" />
+        <h1 className="mt-3 text-xl font-semibold tracking-tight">Pesanan diterima</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Order ID:{" "}
           <span className="font-mono font-medium text-foreground">
@@ -128,7 +134,10 @@ export function ConfirmationPage() {
 
       {transactionId && (
         <Button variant="secondary" asChild className="mt-3 w-full">
-          <Link to={`/invoice/${transactionId}`}>🧾 Lihat Invoice</Link>
+          <Link to={`/invoice/${transactionId}`}>
+            <HugeiconsIcon icon={Invoice01Icon} className="size-4" />
+            Lihat Invoice
+          </Link>
         </Button>
       )}
 

@@ -1,5 +1,7 @@
 import type { CartItem } from "@/types"
 import { computeCartItemUnitPrice } from "@/types"
+import { Add01Icon, MinusSignIcon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
 import { Button } from "@/components/ui/button"
 import { formatPrice } from "@/lib/utils"
 import { getImageUrl } from "@/lib/storage"
@@ -65,7 +67,7 @@ export function CartItemRow({
               onClick={() => onUpdateQty(product.id, quantity - 1, isCustomMix ? key : undefined)}
               aria-label="Kurang"
             >
-              −
+              <HugeiconsIcon icon={MinusSignIcon} className="size-3.5" />
             </Button>
             <span className="w-8 text-center text-sm">{quantity}</span>
             <Button
@@ -74,10 +76,10 @@ export function CartItemRow({
               onClick={() => onUpdateQty(product.id, quantity + 1, isCustomMix ? key : undefined)}
               aria-label="Tambah"
             >
-              +
+              <HugeiconsIcon icon={Add01Icon} className="size-3.5" />
             </Button>
           </div>
-          <span className="text-sm font-semibold">
+          <span className="text-sm font-semibold tabular-nums">
             {formatPrice(unitPrice * quantity)}
           </span>
         </div>

@@ -1,4 +1,6 @@
 import { Link, useNavigate } from "react-router-dom"
+import { ShoppingBag02Icon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
 import { useActiveCampaign } from "@/hooks/use-active-campaign"
 import { useCampaignQuota } from "@/hooks/use-campaign-quota"
 import { cartItemKey, useCart } from "@/context/cart-context"
@@ -17,7 +19,7 @@ export function CartPage() {
   if (items.length === 0) {
     return (
       <main className="mx-auto max-w-lg px-4 py-16 text-center">
-        <p className="text-4xl">🛒</p>
+        <HugeiconsIcon icon={ShoppingBag02Icon} className="mx-auto size-12 text-muted-foreground" />
         <h1 className="mt-4 text-lg font-medium">Keranjang kosong</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Tambahkan pempek favoritmu terlebih dahulu
@@ -48,7 +50,7 @@ export function CartPage() {
 
       <div className="flex items-center justify-between text-sm">
         <span className="text-muted-foreground">Subtotal</span>
-        <span className="font-semibold">{formatPrice(totalPrice)}</span>
+        <span className="font-semibold tabular-nums">{formatPrice(totalPrice)}</span>
       </div>
 
       <p className="mt-2 text-xs text-muted-foreground">

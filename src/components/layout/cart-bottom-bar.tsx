@@ -22,7 +22,7 @@ export function CartBottomBar() {
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
           <div className="leading-tight">
             <p className="text-xs text-muted-foreground">Total</p>
-            <p className="text-base font-semibold">{formatPrice(totalPrice)}</p>
+            <p className="text-base font-semibold tabular-nums">{formatPrice(totalPrice)}</p>
           </div>
           <Button asChild>
             <Link to="/cart">

@@ -174,12 +174,15 @@ export function MixCustomPicker({
   const [quantities, setQuantities] = React.useState<Record<string, number>>({})
   const [packQty, setPackQty] = React.useState(1)
 
-  React.useEffect(() => {
+  // Reset the form each time the picker opens
+  const [wasOpen, setWasOpen] = React.useState(open)
+  if (wasOpen !== open) {
+    setWasOpen(open)
     if (open) {
       setQuantities({})
       setPackQty(1)
     }
-  }, [open])
+  }
 
   function setTypeQty(typeId: string, delta: number) {
     setQuantities((prev) => {

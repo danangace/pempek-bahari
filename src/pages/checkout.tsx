@@ -4,7 +4,7 @@ import { cartItemKey, useCart } from "@/context/cart-context"
 import { useActiveCampaign } from "@/hooks/use-active-campaign"
 import { useCampaignQuota } from "@/hooks/use-campaign-quota"
 import { supabase } from "@/lib/supabase"
-import { formatPrice } from "@/lib/utils"
+import { formatPrice, normalizeWhatsappNumber } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -21,7 +21,8 @@ export function CheckoutPage() {
   const { campaign, loading: campaignLoading } = useActiveCampaign()
   const quota = useCampaignQuota(campaign)
   const [loading, setLoading] = React.useState(false)
-  const submittedRef = React.useRef(false)
+  const [waTouched, setWaTouched] = React.useState(false)
+  const [submitted, setSubmitted] = React.useState(false)
 
   const [form, setForm] = React.useState<CheckoutFormData>({
     customer_name: "",
@@ -32,10 +33,13 @@ export function CheckoutPage() {
 
   // Redirect to home if cart is empty — but NOT after a successful submit
   React.useEffect(() => {
-    if (items.length === 0 && !submittedRef.current) navigate("/")
-  }, [items.length, navigate])
+    if (items.length === 0 && !submitted) navigate("/")
+  }, [items.length, navigate, submitted])
 
-  if (items.length === 0 && !submittedRef.current) return null
+  if (items.length === 0 && !submitted) return null
+
+  const whatsappNumber = normalizeWhatsappNumber(form.whatsapp_number)
+  const waInvalid = waTouched && form.whatsapp_number !== "" && !whatsappNumber
 
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -52,6 +56,12 @@ export function CheckoutPage() {
       return
     }
 
+    if (!whatsappNumber) {
+      setWaTouched(true)
+      toast.error("Nomor WhatsApp tidak valid.")
+      return
+    }
+
     if (quota.exceeds(items)) {
       toast.error("Kuota produksi untuk sementara sudah penuh. Silakan cek kembali nanti.")
       return
@@ -62,7 +72,7 @@ export function CheckoutPage() {
     try {
       const { data, error } = await supabase.rpc("create_order_with_items", {
         p_customer_name: form.customer_name.trim(),
-        p_whatsapp_number: form.whatsapp_number.trim(),
+        p_whatsapp_number: whatsappNumber,
         p_address: form.address.trim(),
         p_note: form.note.trim() || null,
         p_total_amount: totalPrice,
@@ -94,7 +104,7 @@ export function CheckoutPage() {
         transaction_id: string
       }
 
-      submittedRef.current = true
+      setSubmitted(true)
       clearCart()
       navigate(`/confirmation/${order_id}`, {
         state: { transactionId: transaction_id },
@@ -133,10 +143,20 @@ export function CheckoutPage() {
               name="whatsapp_number"
               value={form.whatsapp_number}
               onChange={handleChange}
+              onBlur={() => setWaTouched(true)}
               placeholder="Contoh: 08123456789"
               type="tel"
+              inputMode="tel"
+              aria-invalid={waInvalid}
+              aria-describedby={waInvalid ? "wa-error" : undefined}
               required
             />
+            {waInvalid && (
+              <p id="wa-error" className="text-xs text-destructive">
+                Nomor tidak valid. Gunakan nomor seluler Indonesia, misalnya
+                08123456789 atau +628123456789.
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">

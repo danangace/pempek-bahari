@@ -32,10 +32,14 @@ export function InvoicePage() {
     )
   }
 
-  if (error || !invoice) {
+  if (error || !invoice || invoice.orders?.deleted === 1) {
     return (
       <main className="mx-auto max-w-lg px-4 py-16 text-center">
-        <p className="text-muted-foreground">Invoice tidak ditemukan.</p>
+        <p className="text-muted-foreground">
+          {invoice?.orders?.deleted === 1
+            ? "Pesanan ini sudah dibatalkan, jadi invoice tidak tersedia."
+            : "Invoice tidak ditemukan."}
+        </p>
         <Button asChild className="mt-4">
           <Link to="/">Kembali ke Menu</Link>
         </Button>

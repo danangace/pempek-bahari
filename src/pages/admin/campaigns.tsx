@@ -1,4 +1,5 @@
 import * as React from "react"
+import { useCampaignQuota } from "@/hooks/use-campaign-quota"
 import { useCampaigns } from "@/hooks/use-campaigns"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -53,6 +54,20 @@ function CampaignStatusBadge({ status }: { status: CampaignStatus }) {
     <Badge variant="outline" className={`border-0 font-medium ${cfg.className}`}>
       {cfg.label}
     </Badge>
+  )
+}
+
+function QuotaCell({ campaign }: { campaign: Campaign }) {
+  const { used, loading } = useCampaignQuota(campaign)
+  if (campaign.target_quota === null) {
+    return <span className="text-muted-foreground">Tanpa batas</span>
+  }
+  const full = !loading && used >= campaign.target_quota
+  return (
+    <span className={full ? "font-medium text-destructive" : undefined}>
+      {loading ? "…" : used} / {campaign.target_quota} paket
+      {full && " · penuh"}
+    </span>
   )
 }
 
@@ -225,7 +240,7 @@ export function AdminCampaignsPage() {
                 <TableHead>Mulai Order</TableHead>
                 <TableHead>Tutup Order</TableHead>
                 <TableHead>Mulai Pengiriman</TableHead>
-                <TableHead>Target Kuota</TableHead>
+                <TableHead>Kuota Terpakai</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="sticky right-0 bg-background">Aksi</TableHead>
               </TableRow>
@@ -247,7 +262,7 @@ export function AdminCampaignsPage() {
                     {c.start_delivery_date ? formatDate(c.start_delivery_date) : "—"}
                   </TableCell>
                   <TableCell className="text-sm whitespace-nowrap">
-                    {c.target_quota !== null ? `${c.target_quota} paket` : "Tanpa batas"}
+                    <QuotaCell campaign={c} />
                   </TableCell>
                   <TableCell>
                     <CampaignStatusBadge status={c.status} />

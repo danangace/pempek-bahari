@@ -2,6 +2,7 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/figtree";
+@import "@fontsource-variable/figtree/wght-italic.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -126,8 +127,12 @@
     }
   html {
     @apply font-sans;
+    scroll-behavior: smooth;
     }
   button, a, [role="button"] {
     cursor: pointer;
+    }
+  button:not(:disabled):active {
+    transform: scale(0.98);
     }
 }

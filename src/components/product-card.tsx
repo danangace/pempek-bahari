@@ -3,7 +3,6 @@ import type { Product } from "@/types"
 import { computeUnitPrice } from "@/types"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import {
   Dialog,
   DialogContent,
@@ -11,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { ShoppingCart02Icon } from "@hugeicons/core-free-icons"
+import { ShoppingCart02Icon, Settings02Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { getImageUrl } from "@/lib/storage"
 import { formatPrice } from "@/lib/utils"
@@ -52,9 +51,6 @@ export function ProductCard({ product, onAddToCart, onCustomizeMix }: ProductCar
       <CardContent className="flex flex-1 flex-col px-3 py-4">
         <div className="mb-1 flex flex-col gap-1">
           <h3 className="leading-tight font-medium">{product.name}</h3>
-          <Badge variant="secondary" className="w-fit text-xs capitalize">
-            {product.category}
-          </Badge>
         </div>
         {product.description && (
           <div className="mb-2">
@@ -77,7 +73,7 @@ export function ProductCard({ product, onAddToCart, onCustomizeMix }: ProductCar
           {product.is_custom_mix ? (
             <span className="text-sm text-muted-foreground">Harga bervariasi</span>
           ) : (
-            <span className="font-semibold text-primary">
+            <span className="font-semibold text-primary tabular-nums">
               {formatPrice(unitPrice)}
             </span>
           )}
@@ -88,7 +84,8 @@ export function ProductCard({ product, onAddToCart, onCustomizeMix }: ProductCar
               onClick={() => onCustomizeMix?.(product)}
               disabled={!onCustomizeMix}
             >
-              ⚙ Pilih Isian
+              <HugeiconsIcon icon={Settings02Icon} className="size-4" />
+              Pilih Isian
             </Button>
           ) : (
             <Button
@@ -125,7 +122,7 @@ export function ProductCard({ product, onAddToCart, onCustomizeMix }: ProductCar
             </p>
           )}
           {!product.is_custom_mix && (
-            <p className="font-semibold text-primary">{formatPrice(unitPrice)}</p>
+            <p className="font-semibold text-primary tabular-nums">{formatPrice(unitPrice)}</p>
           )}
           {product.is_custom_mix ? (
             <Button
@@ -136,7 +133,8 @@ export function ProductCard({ product, onAddToCart, onCustomizeMix }: ProductCar
                 onCustomizeMix?.(product)
               }}
             >
-              ⚙ Pilih Isian
+              <HugeiconsIcon icon={Settings02Icon} className="size-4" />
+              Pilih Isian
             </Button>
           ) : (
             <Button
