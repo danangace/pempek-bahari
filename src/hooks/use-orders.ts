@@ -8,6 +8,7 @@ interface UseOrdersResult {
   error: string | null
   refetch: () => void
   updateStatus: (orderId: string, status: OrderStatus) => Promise<void>
+  deleteOrder: (orderId: string) => Promise<void>
   markTransactionPaid: (orderId: string) => Promise<void>
   setDeliveryCost: (orderId: string, cost: number | null) => Promise<void>
   setDiscount: (orderId: string, discount: number | null) => Promise<void>
@@ -32,6 +33,7 @@ export function useOrders(): UseOrdersResult {
       const { data, error: fetchError } = await supabase
         .from("orders")
         .select("*, order_items(*, order_item_compositions(*)), transactions(id, is_paid, delivery_cost, discount, cash_advance, bank_account_id, bank_accounts(id, name, bank_name, account_number), delivery_type_id, delivery_types(id, name, is_active))")
+        .eq("deleted", 0)
         .order("created_at", { ascending: false })
 
       if (cancelled) return
@@ -71,6 +73,23 @@ export function useOrders(): UseOrdersResult {
     },
     []
   )
+
+  // Soft delete: the row stays in the database with deleted = 1 and is
+  // filtered out of the list above. Only cancelled orders are deleted from the UI.
+  const deleteOrder = React.useCallback(async (orderId: string) => {
+    const { data, error: updateError } = await supabase
+      .from("orders")
+      .update({ deleted: 1 })
+      .eq("id", orderId)
+      .select("id")
+
+    if (updateError) throw new Error(updateError.message)
+    if (!data || data.length === 0) {
+      throw new Error("Pesanan tidak ditemukan atau tidak bisa diperbarui.")
+    }
+
+    setOrders((prev) => prev.filter((o) => o.id !== orderId))
+  }, [])
 
   const markTransactionPaid = React.useCallback(async (orderId: string) => {
     const paidAt = new Date().toISOString()
@@ -232,5 +251,5 @@ export function useOrders(): UseOrdersResult {
     []
   )
 
-  return { orders, loading, error, refetch, updateStatus, markTransactionPaid, setDeliveryCost, setDiscount, setCashAdvance, setBankAccount, setDeliveryType }
+  return { orders, loading, error, refetch, updateStatus, deleteOrder, markTransactionPaid, setDeliveryCost, setDiscount, setCashAdvance, setBankAccount, setDeliveryType }
 }

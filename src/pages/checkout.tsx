@@ -2,6 +2,7 @@ import * as React from "react"
 import { useNavigate } from "react-router-dom"
 import { useCart } from "@/context/cart-context"
 import { useActiveCampaign } from "@/hooks/use-active-campaign"
+import { useCampaignQuota } from "@/hooks/use-campaign-quota"
 import { supabase } from "@/lib/supabase"
 import { formatPrice } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -18,6 +19,7 @@ export function CheckoutPage() {
   const { items, totalPrice, clearCart } = useCart()
   const navigate = useNavigate()
   const { campaign, loading: campaignLoading } = useActiveCampaign()
+  const quota = useCampaignQuota(campaign)
   const [loading, setLoading] = React.useState(false)
   const submittedRef = React.useRef(false)
 
@@ -47,6 +49,11 @@ export function CheckoutPage() {
 
     if (!campaign) {
       toast.error("Pemesanan sedang tidak dibuka. Silakan cek kembali nanti.")
+      return
+    }
+
+    if (quota.exceeds(items)) {
+      toast.error("Kuota produksi untuk sementara sudah penuh. Silakan cek kembali nanti.")
       return
     }
 
@@ -159,11 +166,17 @@ export function CheckoutPage() {
             />
           </div>
 
+          {!quota.loading && quota.exceeds(items) && (
+            <p className="text-sm text-destructive">
+              Kuota produksi untuk sementara sudah penuh, pembelian belum bisa dilakukan.
+            </p>
+          )}
+
           <Button
             type="submit"
             size="lg"
             className="w-full"
-            disabled={loading || campaignLoading || !campaign}
+            disabled={loading || campaignLoading || !campaign || quota.loading || quota.exceeds(items)}
           >
             {loading ? "Memproses..." : "Pesan Sekarang"}
           </Button>

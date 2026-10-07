@@ -501,6 +501,8 @@ export function ProductionPlanPage() {
 
   const typeNames = new Map(pempekTypes.map((t) => [t.id, t.name]))
   const productNamesMap = new Map(products.map((p) => [p.id, p.name]))
+  const productCategoryById = new Map(products.map((p) => [p.id, p.category]))
+  const productCategoryByName = new Map(products.map((p) => [p.name, p.category]))
   const customMixNames = new Set(
     products.filter((p) => p.is_custom_mix).map((p) => p.name)
   )
@@ -519,6 +521,32 @@ export function ProductionPlanPage() {
   const aggregate = aggregateByPempekType(activeOrders, typeNames)
   const byProduct = aggregateByProduct(activeOrders)
   const totalPieces = aggregate.reduce((sum, p) => sum + p.total_pieces, 0)
+
+  // Split pack totals: main packs ("pempek") vs add-ons ("pelengkap", e.g. Ekstra Cuko)
+  const categoryOf = (prod: ProductBreakdown) =>
+    (prod.product_id ? productCategoryById.get(prod.product_id) : undefined) ??
+    productCategoryByName.get(prod.product_name) ??
+    "pempek"
+  const sumGroup = (group: ProductBreakdown[]) => ({
+    demand: group.reduce((sum, p) => sum + p.total_packs, 0),
+    packaged: group.reduce(
+      (sum, p) => sum + (p.product_id ? (productTotals.get(p.product_id) ?? 0) : 0),
+      0
+    ),
+  })
+  const mainProducts = byProduct.filter((p) => categoryOf(p) !== "pelengkap")
+  const addOnProducts = byProduct.filter((p) => categoryOf(p) === "pelengkap")
+  const packGroups = [
+    { label: "Paket Pempek", ...sumGroup(mainProducts) },
+    ...(addOnProducts.length > 0
+      ? [
+          {
+            label: addOnProducts.map((p) => p.product_name).join(", "),
+            ...sumGroup(addOnProducts),
+          },
+        ]
+      : []),
+  ]
 
   const selectedCampaign = campaigns.find((c) => c.id === campaignFilter)
   const isLoading = loading || typesLoading || campaignsLoading
@@ -703,20 +731,22 @@ export function ProductionPlanPage() {
                 })}
               </TableBody>
               <TableFooter>
-                <TableRow>
-                  <TableCell className="font-semibold">Total</TableCell>
-                  <TableCell className="text-right font-semibold">
-                    {byProduct.reduce((sum, p) => sum + p.total_packs, 0)} pack
-                  </TableCell>
-                  {isSpecificCampaign && (
-                    <>
-                      <TableCell className="text-right font-semibold">
-                        {Array.from(productTotals.values()).reduce((s, v) => s + v, 0)}
-                      </TableCell>
-                      <TableCell />
-                    </>
-                  )}
-                </TableRow>
+                {packGroups.map((g) => (
+                  <TableRow key={g.label}>
+                    <TableCell className="font-semibold">{g.label}</TableCell>
+                    <TableCell className="text-right font-semibold">
+                      {g.demand} pack
+                    </TableCell>
+                    {isSpecificCampaign && (
+                      <>
+                        <TableCell className="text-right font-semibold">
+                          {g.packaged}
+                        </TableCell>
+                        <TableCell />
+                      </>
+                    )}
+                  </TableRow>
+                ))}
               </TableFooter>
             </Table>
           </div>

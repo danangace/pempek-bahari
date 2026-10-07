@@ -2,6 +2,7 @@ import * as React from "react"
 import { useProducts } from "@/hooks/use-products"
 import { usePempekTypes } from "@/hooks/use-pempek-types"
 import { useCart } from "@/context/cart-context"
+import { useCampaignQuota } from "@/hooks/use-campaign-quota"
 import { useActiveCampaign } from "@/hooks/use-active-campaign"
 import { ProductCard } from "@/components/product-card"
 import { MixCustomPicker } from "@/components/mix-custom-picker"
@@ -67,6 +68,7 @@ export function HomePage() {
   const { products, loading: productsLoading, error } = useProducts()
   const { pempekTypes, loading: typesLoading } = usePempekTypes()
   const { campaign, loading: campaignLoading } = useActiveCampaign()
+  const quota = useCampaignQuota(campaign)
   const { addItem } = useCart()
   const [pickerProduct, setPickerProduct] = React.useState<Product | null>(null)
 
@@ -125,6 +127,11 @@ export function HomePage() {
   return (
     <main className="mx-auto max-w-5xl px-4 py-8">
       <CampaignBanner campaign={campaign} />
+      {quota.isFull && (
+        <p className="mb-6 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          Kuota produksi untuk sementara sudah penuh, sehingga belum bisa melakukan pembelian.
+        </p>
+      )}
 
       {productsLoading ? (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">

@@ -56,6 +56,11 @@ function CampaignStatusBadge({ status }: { status: CampaignStatus }) {
   )
 }
 
+function parseQuota(value: string | undefined): number | null {
+  const n = parseInt(value ?? "", 10)
+  return Number.isNaN(n) ? null : n
+}
+
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString("id-ID", {
     day: "2-digit",
@@ -70,6 +75,7 @@ interface CreateFormData {
   purchase_start_date: string
   purchase_end_date: string
   start_delivery_date: string
+  target_quota: string
 }
 
 export function AdminCampaignsPage() {
@@ -79,6 +85,7 @@ export function AdminCampaignsPage() {
   const [showCreateDialog, setShowCreateDialog] = React.useState(false)
   const [editingCampaign, setEditingCampaign] = React.useState<Campaign | null>(null)
   const [submitting, setSubmitting] = React.useState(false)
+  const [confirmLowerQuota, setConfirmLowerQuota] = React.useState<{ from: number; to: number } | null>(null)
   const [advancingId, setAdvancingId] = React.useState<string | null>(null)
 
   const [createForm, setCreateForm] = React.useState<CreateFormData>({
@@ -87,6 +94,7 @@ export function AdminCampaignsPage() {
     purchase_start_date: "",
     purchase_end_date: "",
     start_delivery_date: "",
+    target_quota: "",
   })
 
   const [editForm, setEditForm] = React.useState<Partial<CreateFormData>>({})
@@ -99,6 +107,7 @@ export function AdminCampaignsPage() {
       purchase_start_date: campaign.purchase_start_date,
       purchase_end_date: campaign.purchase_end_date,
       start_delivery_date: campaign.start_delivery_date ?? "",
+      target_quota: campaign.target_quota?.toString() ?? "",
     })
   }
 
@@ -112,6 +121,7 @@ export function AdminCampaignsPage() {
         purchase_start_date: createForm.purchase_start_date,
         purchase_end_date: createForm.purchase_end_date,
         start_delivery_date: createForm.start_delivery_date || null,
+        target_quota: parseQuota(createForm.target_quota),
       })
       toast.success("Campaign berhasil dibuat")
       setShowCreateDialog(false)
@@ -123,8 +133,19 @@ export function AdminCampaignsPage() {
     }
   }
 
-  async function handleEdit(e: React.FormEvent) {
+  function handleEditSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (!editingCampaign) return
+    const oldQuota = editingCampaign.target_quota
+    const newQuota = parseQuota(editForm.target_quota)
+    if (oldQuota !== null && newQuota !== null && newQuota < oldQuota) {
+      setConfirmLowerQuota({ from: oldQuota, to: newQuota })
+      return
+    }
+    void saveEdit()
+  }
+
+  async function saveEdit() {
     if (!editingCampaign) return
     setSubmitting(true)
     try {
@@ -134,8 +155,10 @@ export function AdminCampaignsPage() {
         purchase_start_date: editForm.purchase_start_date,
         purchase_end_date: editForm.purchase_end_date,
         start_delivery_date: editForm.start_delivery_date || null,
+        target_quota: parseQuota(editForm.target_quota),
       })
       toast.success("Campaign berhasil diperbarui")
+      setConfirmLowerQuota(null)
       setEditingCampaign(null)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Gagal memperbarui campaign")
@@ -202,8 +225,9 @@ export function AdminCampaignsPage() {
                 <TableHead>Mulai Order</TableHead>
                 <TableHead>Tutup Order</TableHead>
                 <TableHead>Mulai Pengiriman</TableHead>
+                <TableHead>Target Kuota</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Aksi</TableHead>
+                <TableHead className="sticky right-0 bg-background">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -222,10 +246,13 @@ export function AdminCampaignsPage() {
                   <TableCell className="text-sm whitespace-nowrap">
                     {c.start_delivery_date ? formatDate(c.start_delivery_date) : "—"}
                   </TableCell>
+                  <TableCell className="text-sm whitespace-nowrap">
+                    {c.target_quota !== null ? `${c.target_quota} paket` : "Tanpa batas"}
+                  </TableCell>
                   <TableCell>
                     <CampaignStatusBadge status={c.status} />
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="sticky right-0 bg-background">
                     <div className="flex gap-2">
                       {c.status !== "closed" && (
                         <Button
@@ -241,7 +268,7 @@ export function AdminCampaignsPage() {
                       {(c.status === "draft" || c.status === "open_order") && (
                         <Button
                           size="sm"
-                          variant="ghost"
+                          variant="outline"
                           className="h-7 text-xs"
                           onClick={() => openEdit(c)}
                         >
@@ -319,6 +346,22 @@ export function AdminCampaignsPage() {
                 onChange={(e) => setCreateForm((p) => ({ ...p, start_delivery_date: e.target.value }))}
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="c-quota">
+                Target Kuota Paket Pempek <span className="text-muted-foreground">(opsional)</span>
+              </Label>
+              <Input
+                id="c-quota"
+                type="number"
+                min={0}
+                value={createForm.target_quota ?? ""}
+                onChange={(e) => setCreateForm((p) => ({ ...p, target_quota: e.target.value }))}
+                placeholder="Kosongkan jika tanpa batas"
+              />
+              <p className="text-xs text-muted-foreground">
+                Setelah kuota tercapai, pembeli tidak bisa memesan. Kuota masih bisa diubah selama campaign belum masuk Produksi.
+              </p>
+            </div>
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => setShowCreateDialog(false)}>
                 Batal
@@ -337,7 +380,7 @@ export function AdminCampaignsPage() {
           <DialogHeader>
             <DialogTitle>Edit Campaign</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleEdit} className="space-y-4">
+          <form onSubmit={handleEditSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="e-name">Nama Campaign</Label>
               <Input
@@ -391,6 +434,22 @@ export function AdminCampaignsPage() {
                 onChange={(e) => setEditForm((p) => ({ ...p, start_delivery_date: e.target.value }))}
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="e-quota">
+                Target Kuota Paket Pempek <span className="text-muted-foreground">(opsional)</span>
+              </Label>
+              <Input
+                id="e-quota"
+                type="number"
+                min={0}
+                value={editForm.target_quota ?? ""}
+                onChange={(e) => setEditForm((p) => ({ ...p, target_quota: e.target.value }))}
+                placeholder="Kosongkan jika tanpa batas"
+              />
+              <p className="text-xs text-muted-foreground">
+                Setelah kuota tercapai, pembeli tidak bisa memesan. Kuota masih bisa diubah selama campaign belum masuk Produksi.
+              </p>
+            </div>
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => setEditingCampaign(null)}>
                 Batal
@@ -400,6 +459,26 @@ export function AdminCampaignsPage() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+      {/* Confirm lowering quota */}
+      <Dialog open={!!confirmLowerQuota} onOpenChange={(o) => !o && setConfirmLowerQuota(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Kurangi target kuota?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Target kuota akan diturunkan dari <strong>{confirmLowerQuota?.from} paket</strong> menjadi{" "}
+            <strong>{confirmLowerQuota?.to} paket</strong>. Apakah Anda yakin?
+          </p>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setConfirmLowerQuota(null)}>
+              Batal
+            </Button>
+            <Button disabled={submitting} onClick={() => void saveEdit()}>
+              {submitting ? "Menyimpan..." : "Ya, Kurangi"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </main>

@@ -62,6 +62,8 @@ export interface Campaign {
   purchase_start_date: string
   purchase_end_date: string
   start_delivery_date: string | null
+  /** Max total Paket Pempek packs for this campaign; null = unlimited. */
+  target_quota: number | null
   status: CampaignStatus
   created_at: string
 }
@@ -89,6 +91,8 @@ export interface Order {
   total_amount: number
   status: OrderStatus
   payment_type: PaymentType
+  /** Soft delete flag: 1 = deleted by admin, hidden from admin views. */
+  deleted: number
   created_at: string
 }
 

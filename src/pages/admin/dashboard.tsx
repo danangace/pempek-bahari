@@ -695,7 +695,7 @@ function SpecialOrderDialog({
 }
 
 export function AdminDashboardPage() {
-  const { orders, loading, error, updateStatus, markTransactionPaid, setDeliveryCost, setDiscount, setCashAdvance, setBankAccount, setDeliveryType, refetch } =
+  const { orders, loading, error, updateStatus, deleteOrder, markTransactionPaid, setDeliveryCost, setDiscount, setCashAdvance, setBankAccount, setDeliveryType, refetch } =
     useOrders()
   const { campaigns } = useCampaigns()
   const { bankAccounts } = useBankAccounts()
@@ -715,10 +715,26 @@ export function AdminDashboardPage() {
   const [searchQuery, setSearchQuery] = React.useState("")
   const [updatingId, setUpdatingId] = React.useState<string | null>(null)
   const [showSpecialOrderDialog, setShowSpecialOrderDialog] = React.useState(false)
+  const [orderToDelete, setOrderToDelete] = React.useState<OrderWithItems | null>(null)
+  const [deleting, setDeleting] = React.useState(false)
   const [itemsDialogOrder, setItemsDialogOrder] = React.useState<OrderWithItems | null>(null)
 
   // production-stage campaigns available for special orders
   const productionCampaigns = campaigns.filter((c) => c.status === "production")
+
+  async function handleDeleteOrder() {
+    if (!orderToDelete) return
+    setDeleting(true)
+    try {
+      await deleteOrder(orderToDelete.id)
+      toast.success("Pesanan berhasil dihapus")
+      setOrderToDelete(null)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Gagal menghapus pesanan")
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   const filtered = orders
     .filter((o) => activeTab === "all" || o.status === activeTab)
@@ -1123,6 +1139,16 @@ export function AdminDashboardPage() {
                           </SelectContent>
                         </Select>
                         )}
+                        {order.status === "cancelled" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 text-xs text-destructive"
+                            onClick={() => setOrderToDelete(order)}
+                          >
+                            Hapus
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -1139,6 +1165,27 @@ export function AdminDashboardPage() {
         productionCampaigns={productionCampaigns}
         onSuccess={refetch}
       />
+
+      <Dialog open={!!orderToDelete} onOpenChange={(o) => !o && setOrderToDelete(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Hapus pesanan?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Pesanan #{orderToDelete ? shortId(orderToDelete.id) : ""} atas nama{" "}
+            <strong>{orderToDelete?.customer_name}</strong> akan
+            dihapus dari daftar pesanan dan tidak ikut direkap.
+          </p>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setOrderToDelete(null)}>
+              Batal
+            </Button>
+            <Button variant="destructive" disabled={deleting} onClick={handleDeleteOrder}>
+              {deleting ? "Menghapus..." : "Hapus"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <OrderItemsDialog
         order={itemsDialogOrder}

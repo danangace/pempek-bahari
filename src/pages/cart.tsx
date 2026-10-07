@@ -1,4 +1,6 @@
 import { Link, useNavigate } from "react-router-dom"
+import { useActiveCampaign } from "@/hooks/use-active-campaign"
+import { useCampaignQuota } from "@/hooks/use-campaign-quota"
 import { useCart } from "@/context/cart-context"
 import { CartItemRow } from "@/components/cart-item"
 import { Button } from "@/components/ui/button"
@@ -8,6 +10,9 @@ import { formatPrice } from "@/lib/utils"
 export function CartPage() {
   const { items, removeItem, updateQty, totalPrice } = useCart()
   const navigate = useNavigate()
+  const { campaign } = useActiveCampaign()
+  const quota = useCampaignQuota(campaign)
+  const overQuota = !quota.loading && quota.exceeds(items)
 
   if (items.length === 0) {
     return (
@@ -50,8 +55,16 @@ export function CartPage() {
         Ongkos kirim akan dikonfirmasi via WhatsApp
       </p>
 
+      {overQuota && (
+        <div className="mt-4 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {quota.isFull
+            ? "Mohon maaf, kuota produksi untuk sementara sudah penuh sehingga belum bisa melakukan pembelian. Silakan cek kembali nanti."
+            : `Mohon maaf, sisa kuota produksi hanya ${quota.remaining} paket pempek. Kurangi jumlah paket di keranjang untuk melanjutkan.`}
+        </div>
+      )}
+
       <div className="mt-6 flex flex-col gap-3">
-        <Button size="lg" onClick={() => navigate("/checkout")}>
+        <Button size="lg" disabled={overQuota} onClick={() => navigate("/checkout")}>
           Lanjut Checkout
         </Button>
         <Button variant="outline" asChild>
