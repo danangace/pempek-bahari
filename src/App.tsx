@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom"
 import { useAdmin } from "@/context/admin-context"
 import { Navbar } from "@/components/layout/navbar"
+import { CartBottomBar } from "@/components/layout/cart-bottom-bar"
 import { Footer } from "@/components/layout/footer"
 import { AdminLayout } from "@/components/admin/admin-layout"
 import { HomePage } from "@/pages/home"
@@ -13,6 +14,7 @@ import { AdminCampaignsPage } from "@/pages/admin/campaigns"
 import { AdminPempekTypesPage } from "@/pages/admin/pempek-types"
 import { ProductionPlanPage } from "@/pages/admin/production-plan"
 import { AdminDeliveryTypesPage } from "@/pages/admin/delivery-types"
+import { NotFoundPage } from "@/pages/not-found"
 import { InvoicePage } from "@/pages/invoice"
 
 function PublicLayout() {
@@ -23,6 +25,7 @@ function PublicLayout() {
         <Outlet />
       </div>
       <Footer />
+      <CartBottomBar />
     </div>
   )
 }
@@ -42,6 +45,7 @@ function AppRoutes() {
         <Route path="/checkout" element={<CheckoutPage />} />
         <Route path="/confirmation/:orderId" element={<ConfirmationPage />} />
         <Route path="/invoice/:transactionId" element={<InvoicePage />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Route>
 
       {/* Admin login — no layout */}

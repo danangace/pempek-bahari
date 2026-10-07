@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router-dom"
 import { useActiveCampaign } from "@/hooks/use-active-campaign"
 import { useCampaignQuota } from "@/hooks/use-campaign-quota"
-import { useCart } from "@/context/cart-context"
+import { cartItemKey, useCart } from "@/context/cart-context"
 import { CartItemRow } from "@/components/cart-item"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -36,7 +36,7 @@ export function CartPage() {
       <div className="divide-y divide-border">
         {items.map((item) => (
           <CartItemRow
-            key={item.product.id}
+            key={cartItemKey(item)}
             item={item}
             onRemove={removeItem}
             onUpdateQty={updateQty}

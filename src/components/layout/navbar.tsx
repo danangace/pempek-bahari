@@ -43,7 +43,7 @@ export function Navbar() {
             />
           </Button>
 
-          <Link to="/cart" className="relative p-2">
+          <Link to="/cart" className="relative hidden p-2 md:block">
             <HugeiconsIcon
               icon={ShoppingCart02Icon}
               className="size-6 text-foreground"

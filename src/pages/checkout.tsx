@@ -1,6 +1,6 @@
 import * as React from "react"
 import { useNavigate } from "react-router-dom"
-import { useCart } from "@/context/cart-context"
+import { cartItemKey, useCart } from "@/context/cart-context"
 import { useActiveCampaign } from "@/hooks/use-active-campaign"
 import { useCampaignQuota } from "@/hooks/use-campaign-quota"
 import { supabase } from "@/lib/supabase"
@@ -190,7 +190,7 @@ export function CheckoutPage() {
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
               {items.map((item) => (
-                <div key={item.product.id} className="flex justify-between">
+                <div key={cartItemKey(item)} className="flex justify-between">
                   <span className="text-muted-foreground">
                     {item.product.name} ×{item.quantity}
                   </span>

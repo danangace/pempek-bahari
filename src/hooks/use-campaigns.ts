@@ -17,6 +17,7 @@ interface UpdateCampaignData {
   purchase_start_date?: string
   purchase_end_date?: string
   start_delivery_date?: string | null
+  target_quota?: number | null
   status?: CampaignStatus
 }
 

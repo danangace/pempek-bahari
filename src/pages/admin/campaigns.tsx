@@ -125,7 +125,7 @@ export function AdminCampaignsPage() {
       })
       toast.success("Campaign berhasil dibuat")
       setShowCreateDialog(false)
-      setCreateForm({ name: "", description: "", purchase_start_date: "", purchase_end_date: "", start_delivery_date: "" })
+      setCreateForm({ name: "", description: "", purchase_start_date: "", purchase_end_date: "", start_delivery_date: "", target_quota: "" })
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Gagal membuat campaign")
     } finally {
