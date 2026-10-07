@@ -25,5 +25,11 @@ dist-ssr
 *.sln
 *.sw?
 
+.agents
+
 # copilot
 .github
+
+# CLAUDE
+CLAUDE.md
+.claude
