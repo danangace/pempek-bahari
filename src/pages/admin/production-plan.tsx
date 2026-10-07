@@ -1,6 +1,6 @@
 import * as React from "react"
 import { useOrders } from "@/hooks/use-orders"
-import { useCampaigns } from "@/hooks/use-campaigns"
+import { useCampaignFilter, useCampaigns } from "@/hooks/use-campaigns"
 import { usePempekTypes } from "@/hooks/use-pempek-types"
 import { useProducts } from "@/hooks/use-products"
 import { useIsMobile } from "@/hooks/use-mobile"
@@ -486,7 +486,7 @@ export function ProductionPlanPage() {
   const { products } = useProducts()
   const isMobile = useIsMobile()
   const [mixCustomDialog, setMixCustomDialog] = React.useState<string | null>(null)
-  const [campaignFilter, setCampaignFilter] = React.useState("all")
+  const [campaignFilter, setCampaignFilter] = useCampaignFilter(campaigns)
   const [showAddProduction, setShowAddProduction] = React.useState(false)
   const [showAddPackaging, setShowAddPackaging] = React.useState(false)
 

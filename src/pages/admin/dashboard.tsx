@@ -1,6 +1,6 @@
 import * as React from "react"
 import { useOrders } from "@/hooks/use-orders"
-import { useCampaigns } from "@/hooks/use-campaigns"
+import { useCampaignFilter, useCampaigns } from "@/hooks/use-campaigns"
 import { useBankAccounts } from "@/hooks/use-bank-accounts"
 import { useDeliveryTypes } from "@/hooks/use-delivery-types"
 import { useIsMobile } from "@/hooks/use-mobile"
@@ -709,7 +709,7 @@ export function AdminDashboardPage() {
   const [activeTab, setActiveTab] = React.useState("all")
   const [pendingTab, setPendingTab] = React.useState("all")
   const [filterDrawerOpen, setFilterDrawerOpen] = React.useState(false)
-  const [campaignFilter, setCampaignFilter] = React.useState("all")
+  const [campaignFilter, setCampaignFilter] = useCampaignFilter(campaigns)
   const [deliveryTypeFilter, setDeliveryTypeFilter] = React.useState("all")
   const [pendingDeliveryType, setPendingDeliveryType] = React.useState("all")
   const [searchQuery, setSearchQuery] = React.useState("")

@@ -28,6 +28,29 @@ interface UseCampaignsResult {
   updateCampaign: (id: string, data: UpdateCampaignData) => Promise<void>
 }
 
+/**
+ * The campaign admins are working on right now: the single open_order one,
+ * else the latest one in production, else distribution. Undefined if none.
+ * `campaigns` is expected newest-first (as returned by useCampaigns).
+ */
+export function pickCurrentCampaign(campaigns: Campaign[]): Campaign | undefined {
+  return (
+    campaigns.find((c) => c.status === "open_order") ??
+    campaigns.find((c) => c.status === "production") ??
+    campaigns.find((c) => c.status === "distribution")
+  )
+}
+
+/**
+ * Campaign filter state that defaults to the current campaign until the admin
+ * picks something else ("all" if there is no current campaign).
+ */
+export function useCampaignFilter(campaigns: Campaign[]) {
+  const [selected, setSelected] = React.useState<string | null>(null)
+  const filter = selected ?? pickCurrentCampaign(campaigns)?.id ?? "all"
+  return [filter, setSelected] as const
+}
+
 export function useCampaigns(): UseCampaignsResult {
   const [campaigns, setCampaigns] = React.useState<Campaign[]>([])
   const [loading, setLoading] = React.useState(true)
