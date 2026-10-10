@@ -63,6 +63,52 @@ const NEXT_STATUS: Partial<Record<OrderStatus, OrderStatus>> = {
   delivered: "paid",
 }
 
+function csvCell(value: string): string {
+  return /[",\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value
+}
+
+function billedTotal(order: OrderWithItems): number {
+  const txn = order.transactions
+  return (
+    order.total_amount -
+    (txn?.discount ?? 0) -
+    (txn?.cash_advance ?? 0) +
+    (txn?.delivery_cost ?? 0)
+  )
+}
+
+/** Summary line per customer followed by one line per item, e.g. `1. Verna, 5 Item, Rp165.000`. */
+function buildOrdersCsv(
+  orders: OrderWithItems[],
+  typeNames: Map<string, string>,
+  customProductIds: Set<string>
+): string {
+  const lines: string[] = []
+  orders.forEach((order, index) => {
+    const totalItems = order.order_items.reduce((sum, i) => sum + i.quantity, 0)
+    lines.push(
+      csvCell(
+        `${index + 1}. ${order.customer_name}, ${totalItems} Item, ${formatPrice(billedTotal(order))}`
+      )
+    )
+    for (const item of order.order_items) {
+      const isCustom =
+        (item.product_id != null && customProductIds.has(item.product_id)) ||
+        /custom/i.test(item.product_name)
+      const compositions = item.order_item_compositions ?? []
+      const detail =
+        isCustom && compositions.length > 0
+          ? ` (${compositions
+              .map((c) => `${c.quantity}-${typeNames.get(c.pempek_type_id) ?? c.pempek_type_id}`)
+              .join(", ")})`
+          : ""
+      lines.push(csvCell(`- ${item.quantity} ${item.product_name}${detail}`))
+    }
+    lines.push("")
+  })
+  return lines.join("\r\n")
+}
+
 function buildAdminWhatsAppMessage(order: OrderWithItems): string {
   const bank = order.transactions?.bank_accounts
 
@@ -709,6 +755,7 @@ export function AdminDashboardPage() {
     () => new Map(pempekTypes.map((t) => [t.id, t.name])),
     [pempekTypes]
   )
+  const { products: allProducts } = useProducts()
   const isMobile = useIsMobile()
   const [activeTab, setActiveTab] = React.useState("all")
   const [pendingTab, setPendingTab] = React.useState("all")
@@ -756,6 +803,18 @@ export function AdminDashboardPage() {
       if (!searchQuery.trim()) return true
       return o.customer_name.toLowerCase().includes(searchQuery.toLowerCase())
     })
+
+  function handleDownloadCsv() {
+    const customIds = new Set(allProducts.filter((p) => p.is_custom_mix).map((p) => p.id))
+    const csv = buildOrdersCsv(filtered, typeNames, customIds)
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `pesanan-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
 
   function openFilterDrawer() {
     setPendingTab(activeTab)
@@ -821,6 +880,13 @@ export function AdminDashboardPage() {
           title="Filter"
         >
           <HugeiconsIcon icon={FilterIcon} className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="outline"
+          onClick={handleDownloadCsv}
+          disabled={filtered.length === 0}
+        >
+          Download CSV
         </Button>
       </div>
 
@@ -1014,6 +1080,7 @@ export function AdminDashboardPage() {
                 <TableHead>Diskon</TableHead>
                 <TableHead>Pembayaran DP</TableHead>
                 <TableHead>Ongkir</TableHead>
+                <TableHead>Total Ditagihkan</TableHead>
                 <TableHead>Rekening</TableHead>
                 <TableHead>Pengiriman</TableHead>
                 <TableHead>Bayar</TableHead>
@@ -1092,6 +1159,9 @@ export function AdminDashboardPage() {
                         order={order}
                         onSave={(cost) => setDeliveryCost(order.id, cost)}
                       />
+                    </TableCell>
+                    <TableCell className="font-semibold whitespace-nowrap">
+                      {formatPrice(billedTotal(order))}
                     </TableCell>
                     <TableCell>
                       <BankAccountCell

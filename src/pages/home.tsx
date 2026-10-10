@@ -3,26 +3,89 @@ import { useProducts } from "@/hooks/use-products"
 import { usePempekTypes } from "@/hooks/use-pempek-types"
 import { useCart } from "@/context/cart-context"
 import { useCampaignQuota } from "@/hooks/use-campaign-quota"
-import { useActiveCampaign } from "@/hooks/use-active-campaign"
+import { useActiveCampaign, useLatestInactiveCampaign } from "@/hooks/use-active-campaign"
 import { ProductCard } from "@/components/product-card"
 import { MixCustomPicker } from "@/components/mix-custom-picker"
 import { Button } from "@/components/ui/button"
 import { getImageUrl } from "@/lib/storage"
+import { waLink } from "@/lib/utils"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { CartItemComposition, Product } from "@/types"
 import { Store01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { toast } from "sonner"
 
+const INSTAGRAM_URL = "https://www.instagram.com/pempekbahari_3d/"
+
 function ClosedShopPage() {
+  const { campaign, loading } = useLatestInactiveCampaign()
+  const waNumber = import.meta.env.VITE_WHATSAPP_NUMBER as string
+
+  let title = "Pemesanan Belum Dibuka"
+  let body: React.ReactNode = (
+    <>Pemesanan masih belum dibuka, tetap pantau Social Media kami untuk informasi lebih lanjut.</>
+  )
+  let showWhatsApp = false
+
+  if (!loading && campaign?.status === "production") {
+    title = "Sedang Dalam Proses Produksi"
+    body = (
+      <>
+        Campaign <strong>{campaign.name}</strong> sedang dalam proses produksi,
+        sehingga pemesanan online sudah ditutup. Jika ingin tetap melakukan
+        pemesanan, silakan hubungi kami melalui WhatsApp.
+      </>
+    )
+    showWhatsApp = true
+  } else if (!loading && campaign?.status === "distribution") {
+    title = "Pesanan Sedang Dalam Pengiriman"
+    body = (
+      <>
+        Pesanan campaign <strong>{campaign.name}</strong> sedang dalam proses
+        pengiriman. Terima kasih sudah memesan, tunggu Open Order kami
+        berikutnya ya!
+      </>
+    )
+  } else if (!loading && campaign?.status === "closed") {
+    title = "Campaign Sudah Ditutup"
+    body = (
+      <>
+        Campaign <strong>{campaign.name}</strong> sudah ditutup. Tunggu Open
+        Order kami berikutnya dan terus pantau media sosial kami di Instagram.
+      </>
+    )
+  }
+
+  const showInstagram = !loading && campaign?.status !== "production"
+
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 text-center">
       <HugeiconsIcon icon={Store01Icon} className="mb-6 size-16 text-muted-foreground" />
-      <h1 className="mb-3 text-2xl font-semibold">Pemesanan Belum Dibuka</h1>
-      <p className="max-w-sm text-muted-foreground">
-        Pemesanan masih belum dibuka, tetap pantau Social Media kami untuk
-        informasi lebih lanjut.
-      </p>
+      <h1 className="mb-3 text-2xl font-semibold">{title}</h1>
+      <p className="max-w-sm text-muted-foreground">{body}</p>
+      <div className="mt-6 flex flex-wrap justify-center gap-3">
+        {showWhatsApp && waNumber && (
+          <Button asChild>
+            <a
+              href={waLink(
+                waNumber,
+                `Halo Pempek Bahari, saya ingin melakukan pemesanan untuk campaign ${campaign?.name}.`
+              )}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Hubungi via WhatsApp
+            </a>
+          </Button>
+        )}
+        {showInstagram && (
+          <Button asChild variant="outline">
+            <a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer">
+              @pempekbahari_3d
+            </a>
+          </Button>
+        )}
+      </div>
     </div>
   )
 }
