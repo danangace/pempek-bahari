@@ -70,6 +70,14 @@ const NEXT_STATUS: Partial<Record<OrderStatus, OrderStatus>> = {
   delivered: "paid",
 }
 
+const MANUAL_ORDER_STATUSES: Campaign["status"][] = ["open_order", "production", "distribution"]
+
+const CAMPAIGN_STATUS_LABEL: Partial<Record<Campaign["status"], string>> = {
+  open_order: "Open Order",
+  production: "Produksi",
+  distribution: "Distribusi",
+}
+
 function csvCell(value: string): string {
   return /[",\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value
 }
@@ -123,6 +131,35 @@ function buildOrdersCsv(
     lines.push("")
   })
   return lines.join("\r\n")
+}
+
+/** One row per customer: No, Nama Pelanggan, Rekening, Total Tagihan (subtotal − diskon − DP, excluding ongkir). */
+function buildBillingCsv(orders: OrderWithItems[]): string {
+  const rows = [["No", "Nama Pelanggan", "Rekening", "Total Tagihan"]]
+  orders.forEach((order, index) => {
+    const bank = order.transactions?.bank_accounts
+    rows.push([
+      String(index + 1),
+      order.customer_name,
+      bank ? `${bank.bank_name} ${bank.name}` : "-",
+      formatPrice(
+        order.total_amount -
+          (order.transactions?.discount ?? 0) -
+          (order.transactions?.cash_advance ?? 0)
+      ),
+    ])
+  })
+  return rows.map((row) => row.map(csvCell).join(",")).join("\r\n")
+}
+
+function downloadCsv(csv: string, filenamePrefix: string) {
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = url
+  a.download = `${filenamePrefix}-${new Date().toISOString().slice(0, 10)}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
 }
 
 function buildAdminWhatsAppMessage(order: OrderWithItems): string {
@@ -822,17 +859,17 @@ function OrderItemsDialog({
 function SpecialOrderDialog({
   open,
   onOpenChange,
-  productionCampaigns,
+  manualOrderCampaigns,
   onSuccess,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
-  productionCampaigns: Campaign[]
+  manualOrderCampaigns: Campaign[]
   onSuccess: () => void
 }) {
   const { products } = useProducts()
   const [selectedCampaignId, setCampaignId] = React.useState("")
-  const campaignId = selectedCampaignId || productionCampaigns[0]?.id || ""
+  const campaignId = selectedCampaignId || manualOrderCampaigns[0]?.id || ""
   const [customerName, setCustomerName] = React.useState("")
   const [whatsapp, setWhatsapp] = React.useState("")
   const [address, setAddress] = React.useState("")
@@ -918,11 +955,11 @@ function SpecialOrderDialog({
         <DialogHeader>
           <DialogTitle>Tambah Order Khusus</DialogTitle>
           <p className="text-sm text-muted-foreground">
-            Untuk pelanggan spesial yang memesan di luar periode open order.
+            Tambahkan pesanan secara manual selama campaign belum ditutup.
           </p>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {productionCampaigns.length > 1 && (
+          {manualOrderCampaigns.length > 1 && (
             <div className="space-y-2">
               <Label>Campaign</Label>
               <Select value={campaignId} onValueChange={setCampaignId}>
@@ -930,8 +967,10 @@ function SpecialOrderDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {productionCampaigns.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  {manualOrderCampaigns.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name} · {CAMPAIGN_STATUS_LABEL[c.status] ?? c.status}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -1063,8 +1102,8 @@ export function AdminDashboardPage() {
   const [detailOrderId, setDetailOrderId] = React.useState<string | null>(null)
   const detailOrder = orders.find((o) => o.id === detailOrderId) ?? null
 
-  // production-stage campaigns available for special orders
-  const productionCampaigns = campaigns.filter((c) => c.status === "production")
+  // campaigns that are running (not draft, not closed) accept manual orders
+  const manualOrderCampaigns = campaigns.filter((c) => MANUAL_ORDER_STATUSES.includes(c.status))
 
   async function handleDeleteOrder() {
     if (!orderToDelete) return
@@ -1099,14 +1138,11 @@ export function AdminDashboardPage() {
 
   function handleDownloadCsv() {
     const customIds = new Set(allProducts.filter((p) => p.is_custom_mix).map((p) => p.id))
-    const csv = buildOrdersCsv(filtered, typeNames, customIds)
-    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `pesanan-${new Date().toISOString().slice(0, 10)}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
+    downloadCsv(buildOrdersCsv(filtered, typeNames, customIds), "pesanan")
+  }
+
+  function handleDownloadBilling() {
+    downloadCsv(buildBillingCsv(filtered), "tagihan")
   }
 
   function openFilterDrawer() {
@@ -1147,7 +1183,7 @@ export function AdminDashboardPage() {
             {orders.length} total pesanan
           </p>
         </div>
-        {productionCampaigns.length > 0 && (
+        {manualOrderCampaigns.length > 0 && (
           <Button
             variant="outline"
             className="border-orange-300 text-orange-700 hover:bg-orange-50 dark:hover:bg-orange-950"
@@ -1159,12 +1195,12 @@ export function AdminDashboardPage() {
       </div>
 
       {/* Search + Filter toolbar */}
-      <div className="mb-4 flex items-center gap-2">
+      <div className="mb-4 flex flex-wrap items-center gap-2">
         <Input
           placeholder="Cari nama pelanggan..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="flex-1"
+          className="min-w-40 flex-1"
         />
         <Button
           variant={activeTab !== "all" || deliveryTypeFilter !== "all" ? "default" : "outline"}
@@ -1180,6 +1216,13 @@ export function AdminDashboardPage() {
           disabled={filtered.length === 0}
         >
           Download CSV
+        </Button>
+        <Button
+          variant="outline"
+          onClick={handleDownloadBilling}
+          disabled={filtered.length === 0}
+        >
+          Download Tagihan
         </Button>
       </div>
 
@@ -1605,7 +1648,7 @@ export function AdminDashboardPage() {
       <SpecialOrderDialog
         open={showSpecialOrderDialog}
         onOpenChange={setShowSpecialOrderDialog}
-        productionCampaigns={productionCampaigns}
+        manualOrderCampaigns={manualOrderCampaigns}
         onSuccess={refetch}
       />
 
