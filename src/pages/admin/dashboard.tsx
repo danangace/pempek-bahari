@@ -37,6 +37,13 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
 import { FilterIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -74,6 +81,15 @@ function billedTotal(order: OrderWithItems): number {
     (txn?.discount ?? 0) -
     (txn?.cash_advance ?? 0) +
     (txn?.delivery_cost ?? 0)
+  )
+}
+
+/** Delivered / paid orders are settled, so their money fields become read-only. */
+function isOrderLocked(order: OrderWithItems): boolean {
+  return (
+    order.status === "delivered" ||
+    order.status === "paid" ||
+    !!order.transactions?.is_paid
   )
 }
 
@@ -246,7 +262,6 @@ function DiscountCell({
   onSave: (discount: number | null) => Promise<void>
 }) {
   const initial = order.transactions?.discount ?? null
-  const [editing, setEditing] = React.useState(false)
   const [value, setValue] = React.useState(initial !== null ? String(initial) : "")
   const [saving, setSaving] = React.useState(false)
 
@@ -265,7 +280,6 @@ function DiscountCell({
       const discount = value === "" ? null : Number(value)
       await onSave(discount)
       toast.success("Diskon disimpan")
-      setEditing(false)
     } catch {
       toast.error("Gagal menyimpan diskon")
     } finally {
@@ -273,8 +287,12 @@ function DiscountCell({
     }
   }
 
-  if (initial !== null && !editing) {
-    return <span className="text-sm text-green-600 dark:text-green-400">−{formatPrice(initial)}</span>
+  if (isOrderLocked(order)) {
+    return initial !== null && initial > 0 ? (
+      <span className="text-sm text-green-600 dark:text-green-400">−{formatPrice(initial)}</span>
+    ) : (
+      <span className="text-sm text-muted-foreground">—</span>
+    )
   }
 
   return (
@@ -286,17 +304,11 @@ function DiscountCell({
         onChange={(e) => setValue(e.target.value)}
         placeholder="0"
         className="h-7 w-24 text-xs"
-        autoFocus={editing}
       />
       {isDirty && (
         <Button size="sm" variant="outline" className="h-7 px-2 text-xs" disabled={saving} onClick={handleSave}>
           Simpan
         </Button>
-      )}
-      {editing && !isDirty && (
-        <button onClick={() => setEditing(false)} className="text-xs text-muted-foreground hover:text-foreground">
-          batal
-        </button>
       )}
     </div>
   )
@@ -382,10 +394,12 @@ function BankAccountCell({
   order,
   bankAccounts,
   onSave,
+  className = "w-[140px]",
 }: {
   order: OrderWithItems
   bankAccounts: BankAccount[]
   onSave: (bankAccountId: string | null) => Promise<void>
+  className?: string
 }) {
   const current = order.transactions?.bank_account_id ?? ""
 
@@ -404,7 +418,7 @@ function BankAccountCell({
 
   return (
     <Select value={current} onValueChange={(val) => void onSave(val || null)}>
-      <SelectTrigger className="h-7 w-[140px] text-xs">
+      <SelectTrigger className={`h-7 text-xs ${className}`}>
         <SelectValue placeholder="Pilih rekening" />
       </SelectTrigger>
       <SelectContent>
@@ -423,10 +437,12 @@ function DeliveryTypeCell({
   order,
   deliveryTypes,
   onSave,
+  className = "w-[160px]",
 }: {
   order: OrderWithItems
   deliveryTypes: DeliveryTypeOption[]
   onSave: (deliveryTypeId: string | null) => Promise<void>
+  className?: string
 }) {
   const current = order.transactions?.delivery_type_id ?? ""
   const [saving, setSaving] = React.useState(false)
@@ -450,7 +466,7 @@ function DeliveryTypeCell({
 
   return (
     <Select value={current} onValueChange={(val) => void handleChange(val)} disabled={saving}>
-      <SelectTrigger className="h-7 w-[160px] text-xs">
+      <SelectTrigger className={`h-7 text-xs ${className}`}>
         <SelectValue placeholder="Pilih jenis" />
       </SelectTrigger>
       <SelectContent>
@@ -461,6 +477,281 @@ function DeliveryTypeCell({
         ))}
       </SelectContent>
     </Select>
+  )
+}
+
+function MoneyField({
+  label,
+  initial,
+  successMessage,
+  errorMessage,
+  readOnly = false,
+  negative = false,
+  onSave,
+}: {
+  label: string
+  initial: number | null
+  readOnly?: boolean
+  negative?: boolean
+  successMessage: string
+  errorMessage: string
+  onSave: (value: number | null) => Promise<void>
+}) {
+  const initialText = initial !== null ? String(initial) : ""
+  const [value, setValue] = React.useState(initialText)
+  const [saving, setSaving] = React.useState(false)
+
+  // Sync if prop changes (e.g. after refetch)
+  const [prevInitial, setPrevInitial] = React.useState(initialText)
+  if (prevInitial !== initialText) {
+    setPrevInitial(initialText)
+    setValue(initialText)
+  }
+
+  const isDirty = value !== initialText
+
+  async function handleSave() {
+    setSaving(true)
+    try {
+      await onSave(value === "" ? null : Number(value))
+      toast.success(successMessage)
+    } catch {
+      toast.error(errorMessage)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (readOnly) {
+    return (
+      <DetailRow label={label}>
+        {initial !== null ? (
+          <span className={negative ? "text-green-600 dark:text-green-400" : undefined}>
+            {negative && initial > 0 ? "−" : ""}
+            {formatPrice(initial)}
+          </span>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        )}
+      </DetailRow>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <Label>{label}</Label>
+      <div className="flex items-center gap-2">
+        <Input
+          type="number"
+          min={0}
+          inputMode="numeric"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder="0"
+        />
+        {isDirty && (
+          <Button size="sm" variant="outline" disabled={saving} onClick={handleSave}>
+            Simpan
+          </Button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function DetailRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <div className="text-sm">{children}</div>
+    </div>
+  )
+}
+
+function OrderDetailSheet({
+  order,
+  typeNames,
+  bankAccounts,
+  deliveryTypes,
+  onClose,
+  setDiscount,
+  setCashAdvance,
+  setDeliveryCost,
+  setBankAccount,
+  setDeliveryType,
+}: {
+  order: OrderWithItems | null
+  typeNames: Map<string, string>
+  bankAccounts: BankAccount[]
+  deliveryTypes: DeliveryTypeOption[]
+  onClose: () => void
+  setDiscount: (orderId: string, value: number | null) => Promise<void>
+  setCashAdvance: (orderId: string, value: number | null) => Promise<void>
+  setDeliveryCost: (orderId: string, value: number | null) => Promise<void>
+  setBankAccount: (orderId: string, value: string | null) => Promise<void>
+  setDeliveryType: (orderId: string, value: string | null) => Promise<void>
+}) {
+  const txn = order?.transactions
+  // Delivered / paid orders are settled, so the sheet becomes read-only
+  const locked = !!order && isOrderLocked(order)
+  const bankName = txn?.bank_accounts
+  const deliveryTypeName = deliveryTypes.find((dt) => dt.id === txn?.delivery_type_id)?.name
+  return (
+    <Sheet open={!!order} onOpenChange={(v) => { if (!v) onClose() }}>
+      <SheetContent className="data-[side=right]:w-[92%]">
+        {order && (
+          <>
+            <SheetHeader className="border-b pr-12">
+              <SheetTitle>Detail Pesanan #{shortId(order.id)}</SheetTitle>
+              <SheetDescription>{order.customer_name}</SheetDescription>
+            </SheetHeader>
+
+            <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
+              <DetailRow label="Tanggal">
+                {new Date(order.created_at).toLocaleString("id-ID", {
+                  day: "2-digit",
+                  month: "short",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </DetailRow>
+
+              <DetailRow label="Status">
+                <div className="flex items-center gap-2">
+                  <OrderStatusBadge status={order.status as OrderStatus} />
+                  {txn?.is_paid && (
+                    <span className="font-medium text-green-600 dark:text-green-400">Lunas</span>
+                  )}
+                </div>
+              </DetailRow>
+
+              <DetailRow label="WhatsApp">
+                <a
+                  href={waLink(order.whatsapp_number, buildAdminWhatsAppMessage(order))}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  {order.whatsapp_number}
+                </a>
+              </DetailRow>
+
+              <DetailRow label="Invoice">
+                {txn ? (
+                  <a
+                    href={`/invoice/${txn.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline"
+                  >
+                    Lihat Invoice
+                  </a>
+                ) : (
+                  <span className="text-muted-foreground">—</span>
+                )}
+              </DetailRow>
+
+              <DetailRow label="Item">
+                <div className="flex flex-col gap-2">
+                  {order.order_items.map((item) => {
+                    const compositions = item.order_item_compositions ?? []
+                    const unitPrice = computeOrderItemUnitPrice(item)
+                    return (
+                      <div key={item.id} className="rounded-lg border px-3 py-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <span className="font-medium">{item.product_name}</span>
+                          <span className="shrink-0 text-muted-foreground">×{item.quantity}</span>
+                        </div>
+                        {compositions.length > 0 && (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {compositions
+                              .map((c) => `${typeNames.get(c.pempek_type_id) ?? c.pempek_type_id} ×${c.quantity}`)
+                              .join("  ·  ")}
+                          </p>
+                        )}
+                        <p className="mt-1 text-right text-xs text-muted-foreground">
+                          {formatPrice(unitPrice)} × {item.quantity} ={" "}
+                          <span className="font-semibold text-foreground">
+                            {formatPrice(unitPrice * item.quantity)}
+                          </span>
+                        </p>
+                      </div>
+                    )
+                  })}
+                </div>
+              </DetailRow>
+
+              <DetailRow label="Subtotal">
+                <span className="font-medium">{formatPrice(order.total_amount)}</span>
+              </DetailRow>
+
+              <MoneyField
+                label="Diskon"
+                negative
+                readOnly={locked}
+                initial={txn?.discount ?? null}
+                successMessage="Diskon disimpan"
+                errorMessage="Gagal menyimpan diskon"
+                onSave={(v) => setDiscount(order.id, v)}
+              />
+              <MoneyField
+                label="Pembayaran DP"
+                readOnly={locked}
+                initial={txn?.cash_advance ?? null}
+                successMessage="Pembayaran DP disimpan"
+                errorMessage="Gagal menyimpan pembayaran DP"
+                onSave={(v) => setCashAdvance(order.id, v)}
+              />
+              <MoneyField
+                label="Ongkir"
+                readOnly={locked}
+                initial={txn?.delivery_cost ?? null}
+                successMessage="Ongkir disimpan"
+                errorMessage="Gagal menyimpan ongkir"
+                onSave={(v) => setDeliveryCost(order.id, v)}
+              />
+
+              <div className="rounded-lg bg-muted px-3 py-2 text-sm">
+                <span className="text-muted-foreground">Total Ditagihkan: </span>
+                <strong>{formatPrice(billedTotal(order))}</strong>
+              </div>
+
+              <DetailRow label="Rekening">
+                {locked ? (
+                  bankName ? (
+                    <span>
+                      {bankName.bank_name} · {bankName.account_number}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )
+                ) : (
+                  <BankAccountCell
+                    order={order}
+                    bankAccounts={bankAccounts}
+                    onSave={(id) => setBankAccount(order.id, id)}
+                    className="w-full"
+                  />
+                )}
+              </DetailRow>
+
+              <DetailRow label="Pengiriman">
+                {locked ? (
+                  deliveryTypeName ?? <span className="text-muted-foreground">—</span>
+                ) : (
+                  <DeliveryTypeCell
+                    order={order}
+                    deliveryTypes={deliveryTypes}
+                    onSave={(id) => setDeliveryType(order.id, id)}
+                    className="w-full"
+                  />
+                )}
+              </DetailRow>
+            </div>
+          </>
+        )}
+      </SheetContent>
+    </Sheet>
   )
 }
 
@@ -769,6 +1060,8 @@ export function AdminDashboardPage() {
   const [orderToDelete, setOrderToDelete] = React.useState<OrderWithItems | null>(null)
   const [deleting, setDeleting] = React.useState(false)
   const [itemsDialogOrder, setItemsDialogOrder] = React.useState<OrderWithItems | null>(null)
+  const [detailOrderId, setDetailOrderId] = React.useState<string | null>(null)
+  const detailOrder = orders.find((o) => o.id === detailOrderId) ?? null
 
   // production-stage campaigns available for special orders
   const productionCampaigns = campaigns.filter((c) => c.status === "production")
@@ -1065,6 +1358,82 @@ export function AdminDashboardPage() {
         <p className="py-12 text-center text-muted-foreground">
           Tidak ada pesanan
         </p>
+      ) : isMobile ? (
+        <div className="rounded-lg border border-border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Pelanggan</TableHead>
+                <TableHead>Lihat Detail</TableHead>
+                <TableHead>Aksi</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.map((order) => {
+                const txn = order.transactions
+                return (
+                  <TableRow key={order.id}>
+                    <TableCell className="max-w-[120px]">
+                      <p className="truncate font-medium">{order.customer_name}</p>
+                      <p className="font-mono text-xs text-muted-foreground">
+                        #{shortId(order.id)}
+                      </p>
+                      <div className="mt-1">
+                        <OrderStatusBadge status={order.status as OrderStatus} />
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <button
+                        className="text-sm text-primary underline-offset-2 hover:underline"
+                        onClick={() => setDetailOrderId(order.id)}
+                      >
+                        Lihat Detail
+                      </button>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-1">
+                        {txn?.is_paid && (
+                          <span className="text-sm font-medium text-green-600 dark:text-green-400">
+                            Lunas
+                          </span>
+                        )}
+                        {!txn?.is_paid && (
+                          <Select
+                            value={order.status}
+                            onValueChange={(val) => handleStatusChange(order, val)}
+                            disabled={updatingId === order.id || order.status === "cancelled"}
+                          >
+                            <SelectTrigger className="h-8 w-[110px] text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {NEXT_STATUS[order.status as OrderStatus] && (
+                                <SelectItem value={NEXT_STATUS[order.status as OrderStatus]!}>
+                                  ✓ Konfirmasi → {NEXT_STATUS[order.status as OrderStatus]}
+                                </SelectItem>
+                              )}
+                              <SelectItem value="cancelled">✗ Batalkan</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                        {order.status === "cancelled" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 text-xs text-destructive"
+                            onClick={() => setOrderToDelete(order)}
+                          >
+                            Hapus
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
+        </div>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-border">
           <Table>
@@ -1260,6 +1629,19 @@ export function AdminDashboardPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <OrderDetailSheet
+        order={detailOrder}
+        typeNames={typeNames}
+        bankAccounts={bankAccounts}
+        deliveryTypes={deliveryTypes}
+        onClose={() => setDetailOrderId(null)}
+        setDiscount={setDiscount}
+        setCashAdvance={setCashAdvance}
+        setDeliveryCost={setDeliveryCost}
+        setBankAccount={setBankAccount}
+        setDeliveryType={setDeliveryType}
+      />
 
       <OrderItemsDialog
         order={itemsDialogOrder}
