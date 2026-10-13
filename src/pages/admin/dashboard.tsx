@@ -635,7 +635,10 @@ function OrderDetailSheet({
   const deliveryTypeName = deliveryTypes.find((dt) => dt.id === txn?.delivery_type_id)?.name
   return (
     <Sheet open={!!order} onOpenChange={(v) => { if (!v) onClose() }}>
-      <SheetContent className="data-[side=right]:w-[92%]">
+      <SheetContent
+        className="data-[side=right]:w-[92%]"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
         {order && (
           <>
             <SheetHeader className="border-b pr-12">
