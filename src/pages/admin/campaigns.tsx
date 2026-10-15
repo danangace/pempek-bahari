@@ -1,6 +1,7 @@
 import * as React from "react"
 import { useCampaignQuota } from "@/hooks/use-campaign-quota"
 import { useCampaigns } from "@/hooks/use-campaigns"
+import { useIsMobile } from "@/hooks/use-mobile"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -96,6 +97,7 @@ interface CreateFormData {
 export function AdminCampaignsPage() {
   const { campaigns, loading, error, createCampaign, updateCampaign, refetch } =
     useCampaigns()
+  const isMobile = useIsMobile()
 
   const [showCreateDialog, setShowCreateDialog] = React.useState(false)
   const [editingCampaign, setEditingCampaign] = React.useState<Campaign | null>(null)
@@ -229,6 +231,61 @@ export function AdminCampaignsPage() {
           <Button className="mt-4" onClick={() => setShowCreateDialog(true)}>
             Buat Campaign Pertama
           </Button>
+        </div>
+      ) : isMobile ? (
+        <div className="rounded-lg border border-border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nama Campaign</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Aksi</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {campaigns.map((c) => (
+                <TableRow key={c.id}>
+                  <TableCell className="max-w-[140px] whitespace-normal">
+                    <p className="font-medium">{c.name}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {formatDate(c.purchase_start_date)} – {formatDate(c.purchase_end_date)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      <QuotaCell campaign={c} />
+                    </p>
+                  </TableCell>
+                  <TableCell>
+                    <CampaignStatusBadge status={c.status} />
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-col gap-1">
+                      {c.status !== "closed" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs"
+                          disabled={advancingId === c.id}
+                          onClick={() => handleAdvanceStatus(c)}
+                        >
+                          {NEXT_STATUS_LABEL[c.status] ?? "Lanjut"}
+                        </Button>
+                      )}
+                      {(c.status === "draft" || c.status === "open_order") && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs"
+                          onClick={() => openEdit(c)}
+                        >
+                          Edit
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-border">
