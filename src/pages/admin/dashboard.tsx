@@ -51,7 +51,8 @@ import { formatPrice, shortId, waLink } from "@/lib/utils"
 import { supabase } from "@/lib/supabase"
 import { useProducts } from "@/hooks/use-products"
 import { usePempekTypes } from "@/hooks/use-pempek-types"
-import type { BankAccount, Campaign, DeliveryTypeOption, OrderStatus, OrderWithItems, Product } from "@/types"
+import { MixCustomPicker } from "@/components/mix-custom-picker"
+import type { BankAccount, CartItemComposition, Campaign, DeliveryTypeOption, OrderStatus, OrderWithItems, Product } from "@/types"
 import { computeOrderItemUnitPrice, computeUnitPrice } from "@/types"
 import { toast } from "sonner"
 
@@ -352,8 +353,19 @@ function DiscountCell({
 }
 
 interface SpecialOrderItem {
+  /** Unique per line; custom mix products can appear several times with different compositions */
+  key: string
   product: Product
   quantity: number
+  /** Only set for Mix Custom lines — the admin-selected composition */
+  custom_compositions?: CartItemComposition[]
+}
+
+function specialItemUnitPrice(item: SpecialOrderItem): number {
+  if (item.custom_compositions) {
+    return item.custom_compositions.reduce((sum, c) => sum + c.price_per_piece * c.quantity, 0)
+  }
+  return computeUnitPrice(item.product)
 }
 
 function CashAdvanceCell({
@@ -871,6 +883,8 @@ function SpecialOrderDialog({
   onSuccess: () => void
 }) {
   const { products } = useProducts()
+  const { pempekTypes, loading: loadingTypes } = usePempekTypes()
+  const [mixProduct, setMixProduct] = React.useState<Product | null>(null)
   const [selectedCampaignId, setCampaignId] = React.useState("")
   const campaignId = selectedCampaignId || manualOrderCampaigns[0]?.id || ""
   const [customerName, setCustomerName] = React.useState("")
@@ -896,24 +910,35 @@ function SpecialOrderDialog({
 
   function toggleItem(product: Product) {
     setItems((prev) => {
-      const exists = prev.find((i) => i.product.id === product.id)
-      if (exists) return prev.filter((i) => i.product.id !== product.id)
-      return [...prev, { product, quantity: 1 }]
+      const exists = prev.find((i) => i.key === product.id)
+      if (exists) return prev.filter((i) => i.key !== product.id)
+      return [...prev, { key: product.id, product, quantity: 1 }]
     })
   }
 
-  function setQuantity(productId: string, quantity: number) {
+  function addMixItem(product: Product, compositions: CartItemComposition[], packQty: number) {
+    setItems((prev) => [
+      ...prev,
+      {
+        key: `${product.id}:${crypto.randomUUID()}`,
+        product,
+        quantity: packQty,
+        custom_compositions: compositions,
+      },
+    ])
+  }
+
+  function removeItem(key: string) {
+    setItems((prev) => prev.filter((i) => i.key !== key))
+  }
+
+  function setQuantity(key: string, quantity: number) {
     setItems((prev) =>
-      prev.map((i) =>
-        i.product.id === productId ? { ...i, quantity: Math.max(1, quantity) } : i
-      )
+      prev.map((i) => (i.key === key ? { ...i, quantity: Math.max(1, quantity) } : i))
     )
   }
 
-  const totalAmount = items.reduce(
-    (sum, i) => sum + computeUnitPrice(i.product) * i.quantity,
-    0
-  )
+  const totalAmount = items.reduce((sum, i) => sum + specialItemUnitPrice(i) * i.quantity, 0)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -934,11 +959,17 @@ function SpecialOrderDialog({
           product_id: i.product.id,
           product_name: i.product.name,
           quantity: i.quantity,
-          compositions: (i.product.compositions ?? []).map((c) => ({
-            pempek_type_id: c.pempek_type_id,
-            quantity: c.quantity,
-            price_at_order: c.price,
-          })),
+          compositions: i.custom_compositions
+            ? i.custom_compositions.map((c) => ({
+                pempek_type_id: c.pempek_type_id,
+                quantity: c.quantity,
+                price_at_order: c.price_per_piece,
+              }))
+            : (i.product.compositions ?? []).map((c) => ({
+                pempek_type_id: c.pempek_type_id,
+                quantity: c.quantity,
+                price_at_order: c.price,
+              })),
         })),
       })
       if (error) throw new Error(error.message)
@@ -1025,7 +1056,53 @@ function SpecialOrderDialog({
             <Label>Produk</Label>
             <div className="divide-y rounded-md border">
               {products.map((p) => {
-                const item = items.find((i) => i.product.id === p.id)
+                if (p.is_custom_mix) {
+                  const mixItems = items.filter((i) => i.product.id === p.id)
+                  return (
+                    <div key={p.id} className="space-y-2 px-3 py-2">
+                      <div className="flex items-center gap-3">
+                        <span className="flex-1 text-sm">{p.name}</span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setMixProduct(p)}
+                        >
+                          + Pilih Isian
+                        </Button>
+                      </div>
+                      {mixItems.map((mi) => (
+                        <div key={mi.key} className="flex items-start gap-2 rounded-md bg-muted/50 p-2">
+                          <div className="min-w-0 flex-1 text-xs">
+                            <p className="text-muted-foreground">
+                              {(mi.custom_compositions ?? [])
+                                .map((c) => `${c.quantity}× ${c.pempek_type_name}`)
+                                .join(", ")}
+                            </p>
+                            <p className="font-medium">{formatPrice(specialItemUnitPrice(mi))} / porsi</p>
+                          </div>
+                          <Input
+                            type="number"
+                            min={1}
+                            value={mi.quantity}
+                            onChange={(e) => setQuantity(mi.key, Number(e.target.value))}
+                            className="h-7 w-16 text-xs"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => removeItem(mi.key)}
+                            aria-label="Hapus"
+                          >
+                            ×
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                }
+                const item = items.find((i) => i.key === p.id)
                 return (
                   <div key={p.id} className="flex items-center gap-3 px-3 py-2">
                     <input
@@ -1043,7 +1120,7 @@ function SpecialOrderDialog({
                         type="number"
                         min={1}
                         value={item.quantity}
-                        onChange={(e) => setQuantity(p.id, Number(e.target.value))}
+                        onChange={(e) => setQuantity(item.key, Number(e.target.value))}
                         className="h-7 w-16 text-xs"
                       />
                     )}
@@ -1073,6 +1150,16 @@ function SpecialOrderDialog({
           </DialogFooter>
         </form>
       </DialogContent>
+      {mixProduct && (
+        <MixCustomPicker
+          product={mixProduct}
+          pempekTypes={pempekTypes}
+          loadingTypes={loadingTypes}
+          open
+          onOpenChange={(v) => { if (!v) setMixProduct(null) }}
+          onConfirm={addMixItem}
+        />
+      )}
     </Dialog>
   )
 }
