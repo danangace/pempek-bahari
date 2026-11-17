@@ -102,6 +102,11 @@ function isOrderLocked(order: OrderWithItems): boolean {
   )
 }
 
+/** Discount stays editable until the order is paid (admin may grant a last-minute discount). */
+function isDiscountLocked(order: OrderWithItems): boolean {
+  return order.status === "paid" || !!order.transactions?.is_paid
+}
+
 /** Summary line per customer followed by one line per item, e.g. `1. Verna, 5 Item, Rp165.000`. */
 function buildOrdersCsv(
   orders: OrderWithItems[],
@@ -325,7 +330,7 @@ function DiscountCell({
     }
   }
 
-  if (isOrderLocked(order)) {
+  if (isDiscountLocked(order)) {
     return initial !== null && initial > 0 ? (
       <span className="text-sm text-green-600 dark:text-green-400">−{formatPrice(initial)}</span>
     ) : (
@@ -740,7 +745,7 @@ function OrderDetailSheet({
               <MoneyField
                 label="Diskon"
                 negative
-                readOnly={locked}
+                readOnly={!!order && isDiscountLocked(order)}
                 initial={txn?.discount ?? null}
                 successMessage="Diskon disimpan"
                 errorMessage="Gagal menyimpan diskon"
